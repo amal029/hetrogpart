@@ -1,0 +1,7 @@
+#!/bin/bash
+
+shopt -s nullglob
+for i in Level_*
+do
+    dot $i -Tpng -o $i.png
+done
