@@ -42,6 +42,8 @@ typedef struct
 // Graph type
 typedef adjacency_list< vecS, vecS, undirectedS, AppNode, AppEdge > ApplicationGraphType;
 
+// Edge pair type
+typedef pair< int32_t, int32_t > E;
 
 /**
  *  @brief Represents
@@ -57,7 +59,27 @@ class ApplicationGraph
 		/**
 		 *  @brief
 		 */
-		//int variable;
+		vector < uint32_t > constraint_mask;
+
+		/**
+		 *  @brief
+		 */
+		uint32_t no_of_constraints;
+
+		/**
+		 *  @brief
+		 */
+		uint32_t no_of_vertices;
+
+		/**
+		 *  @brief
+		 */
+		uint32_t no_of_edges;
+
+		/**
+		 *  @brief
+		 */
+		vector < uint32_t > const_wgt_tot;
 
 		/**
 		 *  @brief
@@ -67,6 +89,7 @@ class ApplicationGraph
 	// Functions
 	public:
 		friend class ZoltanInterface;
+		friend class ApplicationDendogram;
 
 		/**
 		 * A constructor.
@@ -85,7 +108,7 @@ class ApplicationGraph
 		 *
 		 *  @param
 		 */
-		int ReadGraph( char* file_name );
+		int ReadGraph( string file_name );
 
 		/**
 		 *  @brief
@@ -94,7 +117,7 @@ class ApplicationGraph
 		 *
 		 *  @param
 		 */
-		int PrintGraphViz( const char* output_file );
+		int PrintGraphViz( string output_file );
 
 		/**
 		 *  @brief
@@ -103,7 +126,35 @@ class ApplicationGraph
 		 *
 		 *  @param
 		 */
-		void ParseTokens();
+		void ParseConstraints();
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		void SetApplicationParameters();
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		int32_t ReadMetisFormat( string file_name );
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		int32_t GenerateAppSubGraphs( vector< vector< uint32_t > > *partitions,
+											vector< ApplicationGraph* > *app_graph_vector );
 
 	private:
 };

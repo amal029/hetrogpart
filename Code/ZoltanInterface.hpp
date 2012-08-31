@@ -17,6 +17,7 @@
 #include <zoltan_cpp.h>
 
 #include "ApplicationGraph.hpp"
+#include "TopoGen.hpp"
 
 using namespace boost;
 using namespace boost::mpi;
@@ -43,6 +44,11 @@ class ZoltanInterface
 		 *  @brief
 		 */
 		ApplicationGraph *app_graph_obj;
+
+		/**
+		 *  @brief
+		 */
+		TopoGen *topo_graph_obj;
 
 		/**
 		 *  @brief
@@ -96,7 +102,7 @@ class ZoltanInterface
 		 *
 		 *  @param
 		 */
-		void SetParmetis(  ApplicationGraph *app_graph_obj_ref );
+		void SetParmetis();
 
 		/**
 		 *  @brief
@@ -105,7 +111,16 @@ class ZoltanInterface
 		 *
 		 *  @param
 		 */
-		int PartitionGraph( ApplicationGraph *app_graph_obj_ref );
+		int32_t PartitionGraph( ApplicationGraph *app_graph_obj_ref, uint32_t nparts, vector< vector< uint32_t > > *partitions );
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		int32_t PartitionGraph( TopoGen *topo_graph_obj_ref, uint32_t nparts, vector< vector< uint32_t > > *partitions, vector< uint32_t > *parts );
 
 		/**
 		 *  @brief
@@ -147,6 +162,50 @@ class ZoltanInterface
 		 *  @param
 		 */
 		static void GetAppEdgeList( void *data, int sizeGID, int sizeLID, int num_obj,
+							ZOLTAN_ID_PTR globalID, ZOLTAN_ID_PTR localID,
+							int *num_edges, ZOLTAN_ID_PTR nborGID, int *nborProc,
+							int wgt_dim, float *ewgts, int *ierr );
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		static int GetNoOfTopoNodes( void *data, int *ierr );
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		static void GetTopoNodeList( void *data, int sizeGID, int sizeLID,
+							ZOLTAN_ID_PTR globalID, ZOLTAN_ID_PTR localID,
+							int wgt_dim, float *obj_wgts, int *ierr );
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		static void GetNumTopoEdges( void *data, int sizeGID, int sizeLID,
+							int num_obj,
+							ZOLTAN_ID_PTR globalID, ZOLTAN_ID_PTR localID,
+							int *num_edges, int *ierr );
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		static void GetTopoEdgeList( void *data, int sizeGID, int sizeLID, int num_obj,
 							ZOLTAN_ID_PTR globalID, ZOLTAN_ID_PTR localID,
 							int *num_edges, ZOLTAN_ID_PTR nborGID, int *nborProc,
 							int wgt_dim, float *ewgts, int *ierr );

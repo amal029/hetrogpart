@@ -22,14 +22,10 @@
 using namespace boost;
 using namespace std;
 
-#define FORMAT "010"
-#define NUM_CONSTRAINTS 3
-#define NUM_FAC 3
-
-#define GPUSIZE 3
-#define GPU_MIPS 10
-#define GPU_VEC  1024
-//int GPUS[GPUSIZE][2] = {{0,0},{0,3},{3,3}};
+const vector< vector< uint32_t > >CONST = { { 100, 1, 1 }, { 10, 1024, 1 } };
+const vector< string >CONST_NAME = { "MIPS", "VEC", "NUM" };
+typedef enum ConstId{ MIPS, VEC, NUM } ConstIdType;
+typedef enum ProcId{ C, G, M } ProcIdType;
 
 typedef struct
 {
@@ -43,9 +39,12 @@ typedef struct
 
 	string label;
 	string shape;
-	string type;
+	ProcIdType type;
 
 	vector< uint32_t > constraint;
+	vector< uint32_t > ids;
+
+	uint32_t compute_power;
 }TopoNode;
 
 // Graph type
@@ -64,18 +63,8 @@ class TopoGen
 {
 	// Variables
 	public:
-		/**
-		 *  @brief
-		 */
-		TopologyGraph mesh;
 
-
-		/**
-		 *  @brief
-		 */
-		uint32_t no_of_nodes;
 	private:
-
 		/**
 		 *  @brief
 		 */
@@ -85,8 +74,46 @@ class TopoGen
 		 *  @brief
 		 */
 		uint32_t dim_2;
+
+		/**
+		 *  @brief
+		 */
+		TopologyGraph mesh;
+
+		/**
+		 *  @brief
+		 */
+		uint32_t no_of_nodes;
+
+		/**
+		 *  @brief
+		 */
+		uint32_t no_of_constraints;
+
+		/**
+		 *  @brief
+		 */
+		uint32_t no_of_edges;
+
+		/**
+		 * @brief
+		 */
+		uint32_t total_compute_power;
+
+		/**
+		 * @brief
+		 */
+		vector< ConstIdType > const_map;
+
+		/**
+		 * @brief
+		 */
+		uint32_t level;
+
 	// Functions
 	public:
+		friend class ZoltanInterface;
+		friend class TopologyDendogram;
 		/**
 		 * A constructor.
 		 */
@@ -113,7 +140,7 @@ class TopoGen
 		 *
 		 *  @param
 		 */
-		int ConvertDimension( uint32_t dim_1_p, uint32_t dim_2_p );
+		int32_t ConvertDimension( uint32_t dim_1_p, uint32_t dim_2_p );
 
 		/**
 		 *  @brief
@@ -122,7 +149,7 @@ class TopoGen
 		 *
 		 *  @param
 		 */
-		int TwoAryTwoMesh();
+		void TwoAryTwoMesh();
 
 		/**
 		*	@brief
@@ -131,7 +158,71 @@ class TopoGen
 		*
 		*	@param
 		*/
-		int PrintGraphViz( const char* output_file );
+		void PrintGraphViz( string output_file );
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		void ComputeTotalPower();
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		bool PermuteConstraints( vector< ConstIdType > *const_map_p );
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		void ResetConstraints();
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		void RearrangeConstraints( vector< ConstIdType > const_map_p );
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		int32_t DeviationInComputePower();
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		int32_t GenerateTopoSubGraph( vector< vector< uint32_t > > *partitions,
+											TopoGen *topo_graph_obj );
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		void GenParams();
 };
 
 

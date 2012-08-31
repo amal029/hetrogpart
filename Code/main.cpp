@@ -4,82 +4,72 @@
 /** @file main.cpp
  *
  */
+#include <iostream>
+#include <vector>
 
 #include "TopoGen.hpp"
 #include "ApplicationGraph.hpp"
 #include "ZoltanInterface.hpp"
+#include "ApplicationDendogram.hpp"
+#include "TopologyDendogram.hpp"
+
+using namespace boost;
+using namespace std;
 
 //main()
 int main( int argc, char **argv )
 {
 	MPI_Init( &argc, &argv );
 
-	TopoGen twodmesh;
+	cout << endl;
 
-	twodmesh.Create( 4, 4 );
+	//TopoGen twodmesh;
+	//twodmesh.Create( 4, 4 );
 
-	ApplicationGraph a;
+	vector< vector< uint32_t >* > *tp_wgts;
+	vector< vector< uint32_t >* > *parts;
 
-	a.ReadGraph( argv[ 1 ] );
+	tp_wgts = new vector< vector< uint32_t >* >;
+	parts = new vector< vector< uint32_t >* >;
 
-	ZoltanInterface ztn;
+	TopologyDendogram t;
 
-	ztn.Create( MPI_COMM_WORLD, argc, argv );
-	ztn.SetParmetis(  &a );
-	ztn.PartitionGraph( &a );
-
-	MPI_Finalize();
+	t.CreateTopologyGraph( 4, 4, tp_wgts, parts, MPI_COMM_WORLD, argc, argv );
 
 	/*
-	ztn.SetParmetis( &a );
+	ApplicationDendogram a;
+	a.SetApplication( argv[ 1 ] );
 
+	vector< vector< uint32_t > > parts_req;
 
-	int ierr = 0;
-
-	int sizeGID = 1;
-	int sizeLID = 1;
-	int wgt_dim = 2;
-
-	int num_obj = ztn.GetNoOfAppNodes( NULL, &ierr );
-
-	cout << "No of nodes=" << num_obj << endl;
-
-	int *globalID = ( int * )calloc( sizeof( int ), num_obj + 1 );
-	int *localID = ( int * )calloc( sizeof( int ), num_obj + 1 );
-	float *obj_wgts = ( float * )calloc( sizeof( float ), ( num_obj + 1 ) * 3 );;
-
-	ztn.GetAppNodeList( NULL, sizeGID, sizeLID, globalID, localID, wgt_dim, obj_wgts, &ierr );
-
-	int *num_edges = ( int * )calloc( sizeof( int ), num_obj + 1 );
-
-	ztn.GetNumAppEdges( NULL, sizeGID, sizeLID, num_obj, globalID, localID, num_edges, &ierr );
-
-	int tot_num_edges = 0;
-	for( int i = 0; i < num_obj; i++ )
+	for( uint32_t i = 1; i < 3; i++ )
 	{
-		cout << globalID[ i ] << "\t" << localID[ i ] << "\t" << num_edges[ i ] << "\t";
+		vector< uint32_t > part;
+		part.resize( i, 2 );
 
-		for( int j = 0; j < wgt_dim; j++ )
-			cout << obj_wgts[ ( i * wgt_dim ) + j ] << "\t";
-
-		tot_num_edges += num_edges[ i ];
-		cout << endl;
+		parts_req.push_back( part );
 	}
 
-	int *nborGID = ( int * )calloc( sizeof( int ), tot_num_edges );
-	int *nborProc = ( int * )calloc( sizeof( int ), tot_num_edges );
-	int e_wgt_dim = 1;
-	float *ewgts = ( float * )calloc( sizeof( float ), tot_num_edges );
-
-	ztn.GetAppEdgeList( NULL, sizeGID, sizeLID, num_obj, globalID, localID, num_edges, nborGID, nborProc, e_wgt_dim, ewgts, &ierr );
-
-	for( int i = 0; i < tot_num_edges; i++ )
-	{
-		cout << nborGID[ i ] <<  "," << ewgts[ i ] << "\t";
-	}
-	cout << endl;
+	a.ConstructDendogram( parts_req, NULL, argc, argv );
 	*/
 
+	/*
+	vector< vector< uint32_t > > partitions;
+
+	vector< uint32_t > a;
+	partitions.push_back( a );
+	partitions.push_back( a );
+
+	for( uint32_t i = 0; i < 16; i++ )
+	{
+		partitions[ i%2 ].push_back( i );
+	}
+
+	TopoGen *subgraph;
+	twodmesh.GenerateTopoSubGraph( &partitions, subgraph );
+	*/
+
+	MPI_Finalize();
 	return 0;
 }
 //end of main()
