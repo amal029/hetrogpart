@@ -107,13 +107,13 @@ int32_t ApplicationGraph :: ReadMetisFormat( string file_name )
 		{
 			if( tokens.size() != 4 )
 			{
-				cout << "Error: Input graph file format incorrect" << endl;
+				cout << "ERROR: Input graph file format incorrect" << endl;
 				return -1;
 			}
 
 			if( tokens[ 2 ] != 11 )
 			{
-				cout << "Error: Input graph without constraints specified" << endl;
+				cout << "ERROR: Input graph without constraints specified" << endl;
 				return -1;
 			}
 
@@ -124,20 +124,27 @@ int32_t ApplicationGraph :: ReadMetisFormat( string file_name )
 			app_graph = ApplicationGraphType( no_of_vertices );
 			tie( v_iter, v_end ) = vertices( app_graph );
 
+			uint32_t index = 1;
+			BGL_FORALL_VERTICES( v1, app_graph, ApplicationGraphType )
+			{
+				app_graph[ v1 ].id = index;
+				app_graph[ v1 ].d_id = index;
+				index++;
+			}
+
 			line_no++;
 			continue;
 		}
 
 		if( ( tokens.size() - no_of_constraints ) % 2 != 0 )
 		{
-			cout << "Error: Missing edge pair in line no." << line_no << endl;
+			cout << "ERROR: Missing edge pair in line no." << line_no << endl;
 			return -1;
 		}
 
 		v = *v_iter;
 
-		app_graph[ v ].id = ( line_no - 1 );
-		string label = "Id=" + lexical_cast< string >( ( line_no - 1 ) ) + " Cnstr=";
+		string label = "Id=" + lexical_cast< string >( app_graph[ v ].id ) + " Cnstr=";
 
 		for( uint32_t i = 0; i < no_of_constraints; i++ )
 		{
@@ -157,13 +164,19 @@ int32_t ApplicationGraph :: ReadMetisFormat( string file_name )
 			for( tie( out_i, out_end ) = out_edges( v, app_graph ); out_i != out_end; ++out_i )
 			{
 				e = *out_i; //assign edge desciptor to iterator
+				//cout << app_graph[ source( e, app_graph ) ].id << " -> ";
+				//cout << app_graph[ target( e, app_graph ) ].id;
+				//cout << "  " << app_graph[ e ].weight << endl;
+
 				if( app_graph[ target( e, app_graph ) ].id == tokens[ i ] )
 				{
 					if( app_graph[ e ].weight != tokens[ i + 1 ] )
 					{
-						cout << "Error: Incorrect weight for edge " ;
+						cout << "ERROR: Incorrect weight for edge " ;
 						cout << app_graph[ source( e, app_graph ) ].id << " -> ";
 						cout << app_graph[ target( e, app_graph ) ].id;
+						cout << ", Found " << app_graph[ e ].weight << " Instead of ";
+						cout << tokens[ i + 1 ] << " @D=" << tokens[ i ] << endl;
 					}
 					found = true;
 				}
@@ -173,8 +186,9 @@ int32_t ApplicationGraph :: ReadMetisFormat( string file_name )
 			{
 				std::pair< graph_traits< ApplicationGraphType >::edge_descriptor, bool > edge_pair;
 				edge_pair = add_edge( ( app_graph[ v ].id - 1 ), ( tokens[ i ] - 1 ), app_graph );
-				//cout << "\t\tAdd edge " << app_graph[ v ].id << " to " << tokens[ i ] << " with " << tokens[ i + 1 ] << endl;
+				//cout << "\t\tAdd edge " << app_graph[ v ].id << " " << ( app_graph[ v ].id - 1 ) << " to " << tokens[ i ] << " " << ( tokens[ i ] - 1 ) << " with " << tokens[ i + 1 ] << endl;
 				app_graph[ edge_pair.first ].weight = tokens[ i + 1 ];
+				//cout << "\t\tAdded edge " << app_graph[ source( edge_pair.first, app_graph ) ].id << " -> " << app_graph[ target( edge_pair.first, app_graph ) ].id << " " << app_graph[ edge_pair.first ].weight << endl;
 			}
 		}
 
@@ -183,7 +197,7 @@ int32_t ApplicationGraph :: ReadMetisFormat( string file_name )
 
 		if( v_iter == v_end )
 		{
-			//cout << "Error: No of vertices do not match that specified" << endl;
+			//cout << "ERROR: No of vertices do not match that specified" << endl;
 			//cout << "Line no: " << line_no << endl;
 			break;
 		}
@@ -274,22 +288,22 @@ void ApplicationGraph :: SetApplicationParameters()
 		app_graph[ e ].label = lexical_cast< string >( app_graph[ e ].weight );
 	}
 
-	//display some info about application
-	cout << "Application Information: " << endl;
-	cout << "------------------------" << endl;
-
-	cout << "No of vertices: " << no_of_vertices;
-	cout << "\tNo of edges: " << no_of_edges << endl << "Constraint Tot: ";
-	for( uint32_t i = 0; i < no_of_constraints; i++ )
+	if( no_of_vertices > 0 )
 	{
-		cout << const_wgt_tot[ i ] << " ";
+		//display some info about application
+		cout << "INFO: App: " << "V=" << no_of_vertices;
+		cout << "\tE=" << no_of_edges << "\tConstraint Tot: ";
+		for( uint32_t i = 0; i < no_of_constraints; i++ )
+		{
+			cout << const_wgt_tot[ i ] << " ";
+		}
+		cout << "\tConstraint Mask: ";
+		for( uint32_t i = 0; i < no_of_constraints; i++ )
+		{
+			cout << constraint_mask[ i ] << " ";
+		}
+		cout << endl;
 	}
-	cout << "\tConstraint Mask: ";
-	for( uint32_t i = 0; i < no_of_constraints; i++ )
-	{
-		cout << constraint_mask[ i ] << " ";
-	}
-	cout << endl;
 
 	/*
 	BGL_FORALL_VERTICES( v, app_graph, ApplicationGraphType )
@@ -330,7 +344,7 @@ int32_t ApplicationGraph :: GenerateAppSubGraphs( vector< vector< uint32_t > > *
 {
 	if( partitions->size() == 0 )
 	{
-		cout << "Error: Application Partition size requested is not possible " << partitions->size() << endl;
+		cout << "ERROR: Application Partition size requested is not possible " << partitions->size() << endl;
 		return -1;
 	}
 
@@ -339,12 +353,16 @@ int32_t ApplicationGraph :: GenerateAppSubGraphs( vector< vector< uint32_t > > *
 		ApplicationGraph *app_graph_obj = new ApplicationGraph();
 		app_graph_obj->app_graph = ApplicationGraphType( partitions->at( i ).size() );
 
+		//cout << "ids: ";
 		uint32_t j = 0;
 		BGL_FORALL_VERTICES( v_sub, app_graph_obj->app_graph, ApplicationGraphType )
 		{
 			app_graph_obj->app_graph[ v_sub ].id = partitions->at( i ).at( j );
+			app_graph_obj->app_graph[ v_sub ].d_id = j + 1;
+			//cout << partitions->at( i ).at( j ) << " ";
 			j++;
 		}
+		//cout << endl;
 
 		BGL_FORALL_VERTICES( v_sub, app_graph_obj->app_graph, ApplicationGraphType )
 		{
@@ -360,72 +378,182 @@ int32_t ApplicationGraph :: GenerateAppSubGraphs( vector< vector< uint32_t > > *
 			}
 		}
 
-		BGL_FORALL_VERTICES( v_orig, app_graph, ApplicationGraphType )
-		{
-			BGL_FORALL_OUTEDGES( v_orig, e, app_graph, ApplicationGraphType )
-			{
-				graph_traits< ApplicationGraphType >::vertex_descriptor sub_v_s = 0, sub_v_d = 0;
-				bool found_s = false, found_d = false;
-				BGL_FORALL_VERTICES( v_sub, app_graph_obj->app_graph, ApplicationGraphType )
+		//BGL_FORALL_VERTICES( v_ov, app_graph_obj->app_graph, ApplicationGraphType )
+		//{
+			//BGL_FORALL_VERTICES( v_orig, app_graph, ApplicationGraphType )
+			//{
+				//BGL_FORALL_OUTEDGES( v_orig, e, app_graph, ApplicationGraphType )
+				BGL_FORALL_EDGES( e, app_graph, ApplicationGraphType )
 				{
-					if( app_graph[ source( e, app_graph ) ].id == app_graph_obj->app_graph[ v_sub ].id )
+					graph_traits< ApplicationGraphType >::vertex_descriptor sub_v_s = 0, sub_v_d = 0;
+					bool found_s = false, found_d = false;
+					BGL_FORALL_VERTICES( v_sub, app_graph_obj->app_graph, ApplicationGraphType )
 					{
-						found_s = true;
-						sub_v_s = v_sub;
-					}
-
-					if( app_graph[ target( e, app_graph ) ].id == app_graph_obj->app_graph[ v_sub ].id )
-					{
-						found_d = true;
-						sub_v_d = v_sub;
-					}
-
-					if( found_s && found_d )
-						break;
-				}
-
-				bool found = false;
-				if( found_s && found_d )
-				{
-					BGL_FORALL_EDGES( s_e, app_graph_obj->app_graph, ApplicationGraphType )
-					{
-						if( ( app_graph[ source( e, app_graph ) ].id == app_graph_obj->app_graph[ source( s_e, app_graph_obj->app_graph ) ].id &&
-								app_graph[ target( e, app_graph ) ].id == app_graph_obj->app_graph[ target( s_e, app_graph_obj->app_graph ) ].id ) ||
-							( app_graph[ source( e, app_graph ) ].id == app_graph_obj->app_graph[ target( s_e, app_graph_obj->app_graph ) ].id &&
-								app_graph[ target( e, app_graph ) ].id == app_graph_obj->app_graph[ source( s_e, app_graph_obj->app_graph ) ].id ) )
+						if( app_graph[ source( e, app_graph ) ].id == app_graph_obj->app_graph[ v_sub ].id )
 						{
-							found = true;
+							found_s = true;
+							sub_v_s = v_sub;
+						}
+
+						if( app_graph[ target( e, app_graph ) ].id == app_graph_obj->app_graph[ v_sub ].id )
+						{
+							found_d = true;
+							sub_v_d = v_sub;
+						}
+
+						if( found_s && found_d )
 							break;
+					}
+
+					bool found = false;
+					if( found_s && found_d )
+					{
+						BGL_FORALL_EDGES( s_e, app_graph_obj->app_graph, ApplicationGraphType )
+						{
+							if( ( app_graph[ source( e, app_graph ) ].id == app_graph_obj->app_graph[ source( s_e, app_graph_obj->app_graph ) ].id &&
+									app_graph[ target( e, app_graph ) ].id == app_graph_obj->app_graph[ target( s_e, app_graph_obj->app_graph ) ].id ) ||
+								( app_graph[ source( e, app_graph ) ].id == app_graph_obj->app_graph[ target( s_e, app_graph_obj->app_graph ) ].id &&
+									app_graph[ target( e, app_graph ) ].id == app_graph_obj->app_graph[ source( s_e, app_graph_obj->app_graph ) ].id ) )
+							{
+								found = true;
+								break;
+							}
 						}
 					}
-				}
-				else
-				{
-					break;
-				}
+					//else
+					//{
+					//	break;
+					//}
 
-				if( found )
-				{
-					break;
+					//if( found )
+					//{
+					//	break;
+					//}
+					//else
+					if( !found && found_s && found_d )
+					{
+						std::pair< graph_traits< ApplicationGraphType >::edge_descriptor, bool > edge_pair;
+						edge_pair = add_edge( sub_v_s, sub_v_d, app_graph_obj->app_graph );
+						app_graph_obj->app_graph[ edge_pair.first ].weight = app_graph[ e ].weight;
+						//cout << "\t\tSubgraph Added edge " << app_graph_obj->app_graph[ source( edge_pair.first, app_graph_obj->app_graph ) ].id << " -> ";
+						//cout << app_graph_obj->app_graph[ target( edge_pair.first, app_graph_obj->app_graph ) ].id << " ";
+						//cout << app_graph_obj->app_graph[ edge_pair.first ].weight << endl;
+					}
 				}
-				else
-				{
-					std::pair< graph_traits< ApplicationGraphType >::edge_descriptor, bool > edge_pair;
-					edge_pair = add_edge( sub_v_s, sub_v_d, app_graph_obj->app_graph );
-					app_graph_obj->app_graph[ edge_pair.first ].weight = app_graph[ e ].weight;
-				}
-			}
-		}
+			//}
+		//}
+
 		app_graph_obj->no_of_vertices = num_vertices( app_graph_obj->app_graph );
 		app_graph_obj->no_of_edges = num_edges( app_graph_obj->app_graph );
 		app_graph_obj->no_of_constraints = no_of_constraints;
 
-		cout << "Subgraph : " << i << endl;
+		if( app_graph_obj->no_of_vertices > 0 )
+			cout << "INFO: Subgraph : " << i << " ";
 		app_graph_obj->SetApplicationParameters();
 		app_graph_vector->push_back( app_graph_obj );
-		cout << endl;
 	}
 	return 1;
+}
+
+int32_t ApplicationGraph :: SetTpWgts( vector< vector< float_t >* > *tp_wgts, vector< int32_t > *part_ids,
+										vector< int32_t > *wgt_idx, vector< float_t > *part_sizes )
+{
+	/*
+	if( tp_wgts->at( 0 )->size() != constraint_mask.size() )
+	{
+		cout << "WARNING: No of constraints of application and topology do not match" << endl;
+		//return -1;
+	}
+	*/
+
+	for( uint32_t i = 0; i < tp_wgts->size(); i++ )
+	{
+		for( uint32_t w_index = 0, j = 0; j < tp_wgts->at( i )->size() && j < constraint_mask.size(); j++ )
+		{
+			if( constraint_mask.at( j ) == 1 )
+			{
+				part_ids->push_back( i );
+				wgt_idx->push_back( w_index++ );
+				part_sizes->push_back( tp_wgts->at( i )->at( j ) );
+			}
+		}
+	}
+
+	return 1;
+}
+
+int32_t ApplicationGraph :: SetTpWgts( vector< vector< float_t >* > *tp_wgts, vector< real_t > *tpwgts )
+{
+	/*
+	if( tp_wgts->at( 0 )->size() != constraint_mask.size() )
+	{
+		cout << "WARNING: No of constraints of application and topology do not match" << endl;
+		//return -1;
+	}
+	*/
+
+	for( uint32_t i = 0; i < tp_wgts->size(); i++ )
+	{
+		for( uint32_t j = 0; j < tp_wgts->at( i )->size() && j < constraint_mask.size(); j++ )
+		{
+			if( constraint_mask.at( j ) == 1 )
+			{
+				tpwgts->push_back( lexical_cast< real_t >( tp_wgts->at( i )->at( j ) ) );
+			}
+		}
+	}
+
+	return 1;
+}
+
+bool ApplicationGraph :: ReadApplication( string filename )
+{
+	cout << endl << "INFO: Reading Application Graph " << filename << endl;
+
+	if( filename.find( ".dot", filename.length() - 4 ) != string::npos )
+	{
+		bool status = ReadGraph( filename.c_str() );
+		if( status )
+		{
+			cout << "INFO: Successfully read application in dot format" << endl;
+			return true;
+		}
+	}
+	else
+	{
+		int32_t status = ReadMetisFormat( filename.c_str() );
+		if( status )
+		{
+			cout << "INFO: Successfully read application in metis format" << endl;
+			return true;
+		}
+		else
+		{
+			cout << "ERROR: " << status << " in reading application from metis format" << endl;
+		}
+	}
+	return false;
+}
+
+void ApplicationGraph :: GenerateMetisFile( string filename )
+{
+	ofstream output_file;
+	output_file.open( filename.c_str() );
+
+	output_file << no_of_vertices << " " << no_of_edges << " 011 " << no_of_constraints << endl;
+
+	BGL_FORALL_VERTICES( v, app_graph, ApplicationGraphType )
+	{
+		for( uint32_t i = 0; i < no_of_constraints; i++ )
+			output_file << lexical_cast< unsigned long >( app_graph[ v ].constraint[ i ] ) << " ";
+
+		BGL_FORALL_OUTEDGES( v, e, app_graph, ApplicationGraphType )
+		{
+			output_file << ( app_graph[ target( e, app_graph ) ].d_id + 0 ) << " " << app_graph[ e ].weight << " ";
+		}
+
+		output_file << endl;
+	}
 }
 
 #endif

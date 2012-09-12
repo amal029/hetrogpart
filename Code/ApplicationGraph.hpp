@@ -17,6 +17,8 @@
 #include <fstream>
 #include <vector>
 
+#include "metis.h"
+
 using namespace boost;
 using namespace std;
 
@@ -29,6 +31,7 @@ typedef struct
 typedef struct
 {
 	uint32_t id;
+	uint32_t d_id;
 
 	string name;
 	string label;
@@ -79,7 +82,7 @@ class ApplicationGraph
 		/**
 		 *  @brief
 		 */
-		vector < uint32_t > const_wgt_tot;
+		vector< uint32_t > const_wgt_tot;
 
 		/**
 		 *  @brief
@@ -88,8 +91,10 @@ class ApplicationGraph
 
 	// Functions
 	public:
-		friend class ZoltanInterface;
+		//friend class ZoltanInterface;
 		friend class ApplicationDendogram;
+		friend class MetisInterface;
+		friend class TopologyDendogram;
 
 		/**
 		 * A constructor.
@@ -153,8 +158,39 @@ class ApplicationGraph
 		 *
 		 *  @param
 		 */
+		bool ReadApplication( string filename );
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
 		int32_t GenerateAppSubGraphs( vector< vector< uint32_t > > *partitions,
 											vector< ApplicationGraph* > *app_graph_vector );
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		int32_t SetTpWgts( vector< vector< float_t >* > *tp_wgts, vector< int32_t > *part_ids,
+										vector< int32_t > *wgt_idx, vector< float_t > *part_sizes );
+
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		int32_t SetTpWgts( vector< vector< float_t >* > *tp_wgts, vector< real_t > *tpwgts );
+
+		void GenerateMetisFile( string filename );
 
 	private:
 };

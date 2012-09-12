@@ -15,6 +15,7 @@
 #include <boost/mpi.hpp>
 #include <mpi.h>
 #include <zoltan_cpp.h>
+#include <boost/range/numeric.hpp>
 
 #include "ApplicationGraph.hpp"
 #include "TopoGen.hpp"
@@ -111,7 +112,8 @@ class ZoltanInterface
 		 *
 		 *  @param
 		 */
-		int32_t PartitionGraph( ApplicationGraph *app_graph_obj_ref, uint32_t nparts, vector< vector< uint32_t > > *partitions );
+		int32_t PartitionGraph( ApplicationGraph *app_graph_obj_ref, uint32_t nparts,
+									vector< vector< float >* > *tp_wgts, vector< vector< uint32_t > > *partitions );
 
 		/**
 		 *  @brief

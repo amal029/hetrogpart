@@ -26,95 +26,97 @@ ApplicationDendogram :: ApplicationDendogram()
 }
 //end of ApplicationDendogram()
 
-void ApplicationDendogram :: SetApplication( string filename )
+bool ApplicationDendogram :: SetApplication( string filename )
 {
 	ApplicationGraph *orig_app = new ApplicationGraph();
 
-	if( filename.find( ".dot", filename.length() - 4 ) != string::npos )
+	if( orig_app->ReadApplication( filename ) )
 	{
-		bool status = orig_app->ReadGraph( filename.c_str() );
-		if( status )
-		{
-			cout << "Successfully read application in dot format" << endl;
-		}
-	}
-	else
-	{
-		int32_t status = orig_app->ReadMetisFormat( filename.c_str() );
-		if( status )
-		{
-			cout << "Successfully read application in metis format" << endl;
-		}
-		else
-		{
-			cout << "Error " << status << " in reading application from metis format" << endl;
-		}
+		vector< ApplicationGraph* > app_graph_vector;
+		app_graph_vector.push_back( orig_app );
+		app_dendogram_obj.push_back( app_graph_vector );
+
+		return true;
 	}
 
-	vector< ApplicationGraph* > app_graph_vector;
-	app_graph_vector.push_back( orig_app );
-	app_dendogram_obj.push_back( app_graph_vector );
-
+	return false;
 }
 
-void ApplicationDendogram :: ConstructDendogram( vector< vector< uint32_t > > parts_req, MPI_Comm mpi_comm,
-														int argc, char **argv )
+void ApplicationDendogram :: ConstructDendogram( vector< vector< vector< uint32_t >* >* > *parts_vector,
+													vector< vector< vector< vector< float_t >* >* >* > *tp_wgts_vector,
+													//MPI_Comm mpi_comm,
+													TopologyDendogram *t,
+													int argc, char **argv )
 {
-	cout << endl << "Creating Application Dendogram for structure :" << endl;
-	for( uint32_t i = 0; i < parts_req.size(); i++ )
+	cout << endl << "Creating Application Dendogram of structure :" << endl;
+	for( uint32_t i = 0; i < parts_vector->size(); i++ )
 	{
-		for( uint32_t j = 0; j < parts_req[ i ].size(); j++ )
+		for( uint32_t j = 0; j < parts_vector->at( i )->size(); j++ )
 		{
-			cout << parts_req[ i ][ j ] << " ";
+			cout << parts_vector->at( i )->at( j )->size() << " ";
 		}
 		cout << endl;
 	}
+	cout << endl;
 
-	for( uint32_t level = 0; level < parts_req.size(); level++ )
+	MetisInterface mtn( GRAPH_K_WAY );
+
+	for( uint32_t level = 0; level < parts_vector->size(); level++ )
 	{
+		cout << "Level " << level << endl;
 		vector< ApplicationGraph* > app_graph_vector;
-		for( uint32_t j = 0; j < parts_req[ level ].size(); j++ )
+		for( uint32_t j = 0; j < parts_vector->at( level )->size(); j++ )
 		{
-			ZoltanInterface ztn;
-			vector< vector< uint32_t > > parts;
+			//ZoltanInterface ztn;
+			vector< vector< uint32_t > > parts( parts_vector->at( level )->at( j )->size() );
 
-			ztn.Create( MPI_COMM_WORLD, argc, argv );
-			ztn.SetParmetis();
+			//ztn.Create( MPI_COMM_WORLD, argc, argv );
+			//ztn.SetParmetis();
 
-			for( uint32_t i = 0; i < parts_req[ level ][ j ]; i++ )
+			/*
+			for( uint32_t i = 0; i < ; i++ )
 			{
 				vector< uint32_t > t;
 				parts.push_back( t );
 			}
+			*/
 
-			cout << endl << "Level " << level << " " << j << " Partitions " <<  parts_req[ level ][ j ] << endl;
-
-			ztn.PartitionGraph( app_dendogram_obj[ level ][ j ], parts_req[ level ][ j ], &parts );
-
-			for( uint32_t i = 0; i < parts.size(); i++ )
+			if( app_dendogram_obj[ level ][ j ]->no_of_vertices > 0 )
 			{
-				cout << i << ": ";
-				for( uint32_t k = 0; k < parts[ i ].size(); k++ )
+				cout << "App Graph " << j << " --> " <<  parts_vector->at( level )->at( j )->size() << " Partitions" << endl;
+				//ztn.PartitionGraph( app_dendogram_obj[ level ][ j ], parts_vector->at( level )->at( j )->size(), tp_wgts_vector->at( level )->at( j ), &parts );
+				mtn.PartitionGraph( app_dendogram_obj[ level ][ j ], parts_vector->at( level )->at( j )->size(), tp_wgts_vector->at( level )->at( j ), &parts );
+
+				for( uint32_t i = 0; i < parts.size(); i++ )
 				{
-					cout << parts[ i ][ k ] << " ";
+					cout << "Partition " << i << ": ";
+					for( uint32_t k = 0; k < parts[ i ].size(); k++ )
+					{
+						cout << parts[ i ][ k ] << " ";
+					}
+					cout << endl;
 				}
 				cout << endl;
+
+				//ztn.DestroyZoltan();
 			}
-			cout << endl;
 
 			app_dendogram_obj[ level ][ j ]->GenerateAppSubGraphs( &parts, &app_graph_vector );
-
 			parts.clear();
-			ztn.DestroyZoltan();
 		}
 		//cout << "Total No of subgraphs " << app_graph_vector.size() << endl;
 		for( uint32_t i = 0; i < app_graph_vector.size(); i++ )
 		{
-			app_graph_vector[ i ]->PrintGraphViz( "Level_" + lexical_cast< string >( level ) +
-													"_Subgraph_" + lexical_cast< string >( i ) );
+			if( app_graph_vector[ i ]->no_of_vertices > 0 )
+				app_graph_vector[ i ]->PrintGraphViz( "Level_" + lexical_cast< string >( level ) +
+													"_Subgraph_" + lexical_cast< string >( i )
+													+ ".dot" );
 		}
+		cout << endl;
 		app_dendogram_obj.push_back( app_graph_vector );
 	}
+
+	t->GenMapping( &app_dendogram_obj );
 
 	/*
 	int ierr = 0;

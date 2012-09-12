@@ -11,7 +11,9 @@
 #include <string>
 
 #include "ApplicationGraph.hpp"
-#include "ZoltanInterface.hpp"
+//#include "ZoltanInterface.hpp"
+#include "MetisInterface.hpp"
+#include "TopologyDendogram.hpp"
 
 using namespace std;
 
@@ -51,8 +53,11 @@ class ApplicationDendogram
 		 *
 		 *  @param
 		 */
-		void ConstructDendogram( vector< vector< uint32_t > > parts_req, MPI_Comm mpi_comm,
-														int argc, char **argv );
+		void ConstructDendogram( vector< vector< vector< uint32_t >* >* > *parts_vector,
+													vector< vector< vector< vector< float_t >* >* >* > *tp_wgts_vector,
+													//MPI_Comm mpi_comm,
+													TopologyDendogram *t,
+													int argc, char **argv );
 
 		/**
 		 *  @brief
@@ -61,7 +66,7 @@ class ApplicationDendogram
 		 *
 		 *  @param
 		 */
-		void SetApplication( string filename );
+		bool SetApplication( string filename );
 
 	private:
 };

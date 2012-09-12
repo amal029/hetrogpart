@@ -66,7 +66,7 @@ void ZoltanInterface :: SetParmetis()
 	zz->Set_Param(  "PARMETIS_METHOD", "PARTKWAY"); //multilevel Kernighan-Lin partitioning
 
 	//zz->Set_Param( "DEBUG_LEVEL", "10" );
-	zz->Set_Param( "PARMETIS_OUTPUT_LEVEL", "1" );
+	zz->Set_Param( "PARMETIS_OUTPUT_LEVEL", "7" );
 	zz->Set_Param(  "PARMETIS_COARSE_ALG", "1" ); //serial partitioning algorithm
 	zz->Set_Param(  "PARMETIS_SEED", "3840" );
 	zz->Set_Param(  "CHECK_GRAPH", "2"); //full checking
@@ -92,7 +92,8 @@ void ZoltanInterface :: SetParmetis()
 	*/
 }
 
-int32_t ZoltanInterface :: PartitionGraph( ApplicationGraph *app_graph_obj_ref, uint32_t nparts, vector< vector< uint32_t > > *partitions )
+int32_t ZoltanInterface :: PartitionGraph( ApplicationGraph *app_graph_obj_ref, uint32_t nparts,
+											vector< vector< float >* > *tp_wgts, vector< vector< uint32_t > > *partitions )
 {
 	if( nparts < 1 )
 	{
@@ -129,6 +130,40 @@ int32_t ZoltanInterface :: PartitionGraph( ApplicationGraph *app_graph_obj_ref, 
 	zz->Set_Num_Edges_Multi_Fn( ZoltanInterface :: GetNumAppEdges, app_graph_obj );
 	zz->Set_Edge_List_Multi_Fn( ZoltanInterface :: GetAppEdgeList, app_graph_obj );
 
+	if( tp_wgts->size() > 0 )
+	//if( 0 )
+	{
+		int global_num = 1;
+		int len;
+		vector< int32_t > part_ids;// = new vector< int32_t >;
+		vector< int32_t > wgt_idx;// = new vector< int32_t >;
+		vector< float_t > part_sizes;// = new vector< float_t >;
+
+		if( app_graph_obj->SetTpWgts( tp_wgts, &part_ids, &wgt_idx, &part_sizes ) )
+		{
+			len = part_sizes.size();
+			cout << "tpwgts : " ;
+			for( uint32_t i = 0; i < part_sizes.size(); i++ )
+			{
+				cout << setprecision( 2 ) << part_sizes[ i ] << " ";
+			}
+			cout << endl;
+
+			int rc = zz->LB_Set_Part_Sizes( global_num, len, ( int* ) &part_ids[ 0 ], ( int* ) &wgt_idx[ 0 ], ( float* ) &part_sizes[ 0 ] );
+
+			if( rc != ZOLTAN_OK )
+			{
+				cout << "Failled to set tp wgts on process" << rank << endl;
+				return -1;
+			}
+		}
+		else
+		{
+			cout << "Failled to get tp wgts on process" << rank << endl;
+			return -1;
+		}
+	}
+
 	int rc = zz->LB_Partition(	changed, //1 if partitioning was changed, 0 otherwise
 								numGidEntries, //Number of integers used for a global ID
 								numLidEntries, //Number of integers used for a local ID
@@ -148,6 +183,8 @@ int32_t ZoltanInterface :: PartitionGraph( ApplicationGraph *app_graph_obj_ref, 
 		cout << "Failled to partition on Process" << rank << endl;
 		return -1;
 	}
+
+	//zz->LB_Eval( 1, NULL, NULL, NULL );
 
 	//cout << rc << " changed=" << changed << " numImport=" << numImport << " numExport=" << numExport;
 	//cout << " numGidEntries=" << numGidEntries << " numLidEntries=" << numLidEntries << endl;
@@ -524,6 +561,9 @@ int32_t ZoltanInterface :: PartitionGraph( TopoGen *topo_graph_obj_ref, uint32_t
 		}
 	}
 
+	/*
+	 * Erase all partitions with size 0
+	 */
 	for( uint32_t j = 0; ; )
 	{
 		if( partitions->at( j ).size() == 0 )
@@ -544,30 +584,6 @@ int32_t ZoltanInterface :: PartitionGraph( TopoGen *topo_graph_obj_ref, uint32_t
 	{
 		parts->push_back( partitions->at( j ).size() );
 	}
-
-	/*
-	std::map<int, int> assignmentMap;
-	if( world.rank() == 0 )
-	{
-		for( int i = 0; i < numExport; i++ )
-		{
-			("obj %d to rank %d\n", exportGlobalGids[i], exportProcs[i]);
-			Vertex *v = theG->vlist[exportGlobalGids[i]];
-			// note: graph nodes assigned to rank 0 are not put in the
-			// assignment map. (default = 0)
-			assignmentMap[ v->id() ] = exportProcs[ i ];
-		}
-	}
-
-	// Distrubute subgraphs to each node
-	broadcast(world, assignmentMap, 0);
-
-	for( VertexList_t::iterator iter = theG->vlist.begin(); iter != theG->vlist.end(); ++iter ) {
-	Vertex *v = (*iter).second;
-	v->prop_list.set(GRAPH_RANK, boost::str(boost::format("%1%") % assignmentMap[ v->id() ] ) );
-	v->rank = assignmentMap[ v->id() ];
-	}
-	*/
 
 	// cleanup
 	Zoltan_LB_Free_Part( &importGlobalGids, &importLocalGids, &importProcs, &importToPart );

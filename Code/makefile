@@ -4,15 +4,26 @@
 # makefile
 #
 
-CPP = mpic++ -Wall -std=gnu++0x -I/home/servesh/App/boost_1_51_0/include -I/home/servesh/App/parmetis-4.0.2/include -I/home/servesh/App/metis-5.0.2/include/ -I/home/servesh/App/zoltan-3.6/include/ -g -lm
+CPP = g++ -Wall -std=gnu++0x -I/home/servesh/App/boost_1_51_0/include -I/home/servesh/App/metis-old/include/ -g -lm
+# -I/home/servesh/App/parmetis-4.0.2/include-I/home/servesh/App/zoltan-3.6/include/
 
-OBJ = main.o TopoGen.o ApplicationGraph.o ZoltanInterface.o ApplicationDendogram.o TopologyDendogram.o
+CC = gcc
+CC_FLAGS = -DSVNINFO="0"
 
-LINK = -L/home/servesh/App/boost_1_51_0/lib -L/home/servesh/App/metis-5.0.2/lib/ -L/home/servesh/App/parmetis-4.0.2/lib -L/home/servesh/App/openmpi-1.4.5/lib -L/home/servesh/App/zoltan-3.6/lib/ -lboost_graph -lzoltan -lboost_mpi -lmpi -lparmetis -lmetis  -L/home/servesh/App/scotch_5.1.2/lib/ -lptscotch  -lptscotcherr -lptscotcherrexit
+LINK_C =
+
+OBJ = main.o TopoGen.o ApplicationGraph.o ApplicationDendogram.o TopologyDendogram.o MetisInterface.o $(METIS_O)
+#ZoltanInterface.o
+
+LINK = -L/home/servesh/App/boost_1_51_0/lib -L/home/servesh/App/metis-old/lib/ -lboost_graph -lmetis
+#  -L/home/servesh/App/parmetis-4.0.2/lib -L/home/servesh/App/openmpi-1.4.5/lib -L/home/servesh/App/zoltan-3.6/lib/  -lzoltan -lboost_mpi -lmpi -lparmetis -lmetis -L/home/servesh/App/scotch_5.1.2/lib/ -lptscotch  -lptscotcherr -lptscotcherrexit
 
 RM = rm -f -v
 
 .PHONY: all all-before all-after clean clean-custom
+
+METIS_C = $(wildcard metis/*.c)
+METIS_O = $(foreach f, $(METIS_C), $(notdir $(basename $(f))).o)
 
 all: all-before Run all-after
 
@@ -21,23 +32,32 @@ clean: clean-custom
 	${RM} Run.x
 	${RM} ops/*.*
 
+clean-ops:
+	${RM} Level*
+
 Run: $(OBJ)
 	$(CPP) $(OBJ) ${LINK} -o Run.x
 
-main.o: main.cpp
+%.o: metis/%.c makefile
+	$(CC) $(CC_FLAGS) -Imetis/GKlib -Imetis -Imetis/libmetis -c $< -o $@
+
+main.o: makefile main.cpp
 	$(CPP) -c main.cpp -o main.o
 
-TopoGen.o: TopoGen.cpp TopoGen.hpp
+TopoGen.o: makefile TopoGen.cpp TopoGen.hpp
 	$(CPP) -c TopoGen.cpp -o TopoGen.o
 
-ApplicationGraph.o: ApplicationGraph.cpp ApplicationGraph.hpp
+ApplicationGraph.o: makefile ApplicationGraph.cpp ApplicationGraph.hpp
 	$(CPP) -c ApplicationGraph.cpp -o ApplicationGraph.o
 
-ApplicationDendogram.o: ApplicationDendogram.cpp ApplicationDendogram.hpp ApplicationGraph.o
+ApplicationDendogram.o: makefile ApplicationDendogram.cpp ApplicationDendogram.hpp ApplicationGraph.o TopologyDendogram.o
 	$(CPP) -c ApplicationDendogram.cpp -o ApplicationDendogram.o
 
-ZoltanInterface.o: ZoltanInterface.cpp ZoltanInterface.hpp TopoGen.o ApplicationGraph.o
-	$(CPP) -c ZoltanInterface.cpp -o ZoltanInterface.o
+#ZoltanInterface.o: makefile ZoltanInterface.cpp ZoltanInterface.hpp TopoGen.o ApplicationGraph.o
+#	$(CPP) -c ZoltanInterface.cpp -o ZoltanInterface.o
 
-TopologyDendogram.o: TopologyDendogram.cpp TopologyDendogram.hpp TopoGen.o
+MetisInterface.o: makefile MetisInterface.cpp MetisInterface.hpp TopoGen.o ApplicationGraph.o $(METIS_O)
+	$(CPP) -c MetisInterface.cpp -o MetisInterface.o
+
+TopologyDendogram.o: makefile TopologyDendogram.cpp TopologyDendogram.hpp TopoGen.o ApplicationGraph.o
 	$(CPP) -c TopologyDendogram.cpp -o TopologyDendogram.o

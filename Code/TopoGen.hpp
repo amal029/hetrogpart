@@ -43,6 +43,13 @@ typedef struct
 
 	vector< uint32_t > constraint;
 	vector< uint32_t > ids;
+	vector< uint32_t > d_ids;
+
+	vector< uint32_t > app_ids;
+	vector< uint32_t > compute_req;
+
+	double_t comp_time;
+	double_t comm_time;
 
 	uint32_t compute_power;
 }TopoNode;
@@ -112,8 +119,9 @@ class TopoGen
 
 	// Functions
 	public:
-		friend class ZoltanInterface;
+		//friend class ZoltanInterface;
 		friend class TopologyDendogram;
+		friend class MetisInterface;
 		/**
 		 * A constructor.
 		 */
@@ -203,7 +211,7 @@ class TopoGen
 		*
 		*	@param
 		*/
-		int32_t DeviationInComputePower();
+		float_t DeviationInComputePower();
 
 		/**
 		*	@brief
@@ -223,6 +231,25 @@ class TopoGen
 		*	@param
 		*/
 		void GenParams();
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		void GenTpWgts( TopoGen *prev_level, vector< vector< vector< float_t >* >* > *tp_wgts_level,
+				vector< vector< uint32_t >* > *parts_level );
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		void GenerateMetisFile( string filename );
 };
 
 

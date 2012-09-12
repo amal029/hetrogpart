@@ -9,7 +9,7 @@
 
 #include "TopoGen.hpp"
 #include "ApplicationGraph.hpp"
-#include "ZoltanInterface.hpp"
+//#include "ZoltanInterface.hpp"
 #include "ApplicationDendogram.hpp"
 #include "TopologyDendogram.hpp"
 
@@ -19,39 +19,41 @@ using namespace std;
 //main()
 int main( int argc, char **argv )
 {
-	MPI_Init( &argc, &argv );
+	ofstream metis_log;
+	metis_log.open( "metis.log" );
+	metis_log << endl;
+	metis_log.close();
 
-	cout << endl;
+	//MPI_Init( &argc, &argv );
 
-	//TopoGen twodmesh;
-	//twodmesh.Create( 4, 4 );
-
-	vector< vector< uint32_t >* > *tp_wgts;
-	vector< vector< uint32_t >* > *parts;
-
-	tp_wgts = new vector< vector< uint32_t >* >;
-	parts = new vector< vector< uint32_t >* >;
+	//level/part/node/tp_wgts
+	vector< vector< vector< vector< float_t >* >* >* > tp_wgts_vector;
+	//level/part/node_id
+	vector< vector< vector< uint32_t >* >* > parts_vector;
 
 	TopologyDendogram t;
-
-	t.CreateTopologyGraph( 4, 4, tp_wgts, parts, MPI_COMM_WORLD, argc, argv );
+	t.CreateTopologyGraph( atoi( argv[ 2 ] ), atoi( argv[ 3 ] ), &tp_wgts_vector, &parts_vector, argc, argv );
 
 	/*
+	TopoGen g;
+	g.Create( atoi( argv[ 2 ] ), atoi( argv[ 3 ] ) );
+
+	MetisInterface mtn( GRAPH_K_WAY );
+	vector< uint32_t > *temp_level_parts = new vector< uint32_t >;
+	vector< vector< uint32_t > > parts( 4 );
+	mtn.PartitionGraph( &g, 4, &parts, temp_level_parts );
+	*/
+
+	if( argv[ 1 ] == NULL )
+	{
+		cout << "ERROR:No application specfied" << endl;
+		return -1;
+	}
+
 	ApplicationDendogram a;
 	a.SetApplication( argv[ 1 ] );
 
-	vector< vector< uint32_t > > parts_req;
-
-	for( uint32_t i = 1; i < 3; i++ )
-	{
-		vector< uint32_t > part;
-		part.resize( i, 2 );
-
-		parts_req.push_back( part );
-	}
-
-	a.ConstructDendogram( parts_req, NULL, argc, argv );
-	*/
+	a.ConstructDendogram( &parts_vector, &tp_wgts_vector, &t, argc, argv );
 
 	/*
 	vector< vector< uint32_t > > partitions;
@@ -69,7 +71,7 @@ int main( int argc, char **argv )
 	twodmesh.GenerateTopoSubGraph( &partitions, subgraph );
 	*/
 
-	MPI_Finalize();
+	//MPI_Finalize();
 	return 0;
 }
 //end of main()

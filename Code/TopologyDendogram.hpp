@@ -9,7 +9,9 @@
 #define TOPOLOGY_DENDOGRAM_HPP
 
 #include "TopoGen.hpp"
-#include "ZoltanInterface.hpp"
+//#include "ZoltanInterface.hpp"
+#include "MetisInterface.hpp"
+#include "ApplicationGraph.hpp"
 
 using namespace std;
 
@@ -48,14 +50,17 @@ class TopologyDendogram
 		/**
 		 *  @brief
 		 */
+		vector< TopoGen* > topo_graph_vector;
 
 		/**
 		 *  @brief
 		 */
+		vector< vector< vector< vector< float_t >* >* >* > *tp_wgts_p;
 
 		/**
 		 *  @brief
 		 */
+		vector< vector< vector< uint32_t >* >* > *parts_p;
 
 	// Functions
 	public:
@@ -86,9 +91,9 @@ class TopologyDendogram
 		 *  @param
 		 */
 		void CreateTopologyGraph( int dim1, int dim2,
-									vector< vector< uint32_t >* > *tp_wgts,
-									vector< vector< uint32_t >* > *parts,
-									MPI_Comm mpi_comm,
+									vector< vector< vector< vector< float_t >* >* >* > *tp_wgts_vector,
+									vector< vector< vector< uint32_t >* >* > *parts_vector,
+									//MPI_Comm mpi_comm,
 									int argc, char **argv );
 
 		/**
@@ -99,11 +104,29 @@ class TopologyDendogram
 		 *  @param
 		 */
 		int32_t BuildDendogram( vector< uint32_t > parts_req,
-								vector< vector< uint32_t >* > *tp_wgts,
-								vector< vector< uint32_t >* > *level_parts,
-								MPI_Comm mpi_comm,
+								vector< vector< vector< vector< float_t >* >* >* > *tp_wgts_vector,
+								vector< vector< vector< uint32_t >* >* > *parts_vector,
+								//MPI_Comm mpi_comm,
 								int argc, char **argv );
 
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		void GenTpWgts( vector< vector< vector< vector< float_t >* >* >* > *tp_wgts_vector,
+									vector< vector< vector< uint32_t >* >* > *parts_vector );
+
+		/**
+		 *  @brief
+		 *
+		 *  desc
+		 *
+		 *  @param
+		 */
+		void GenMapping( vector< vector< ApplicationGraph* > > *app_dendogram_obj );
 
 	private:
 };
