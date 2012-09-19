@@ -24,7 +24,7 @@ using namespace std;
 
 typedef struct
 {
-	float_t weight;
+	uint64_t weight;
 	string label;
 }AppEdge;
 

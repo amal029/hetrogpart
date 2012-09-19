@@ -25,6 +25,10 @@ class TopologyDendogram
 {
 	// Variables
 	public:
+		/**
+		 *  @brief
+		 */
+		float_t time;
 
 	private:
 		/**
@@ -35,7 +39,7 @@ class TopologyDendogram
 		/**
 		 *  @brief
 		 */
-		TopoGen topo_graph;
+		TopoGen orig_topo_graph;
 
 		/**
 		 *  @brief

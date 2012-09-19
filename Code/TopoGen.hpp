@@ -11,6 +11,7 @@
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/iteration_macros.hpp>
+#include <boost/bind.hpp>
 
 #include <cstdlib>
 #include <utility>
@@ -22,14 +23,25 @@
 using namespace boost;
 using namespace std;
 
-const vector< vector< uint32_t > >CONST = { { 100, 1, 1 }, { 10, 1024, 1 } };
+const vector< vector< uint32_t > >CONST = { { 2400, 16, 1 }, { 700, 1024, 1 } };
 const vector< string >CONST_NAME = { "MIPS", "VEC", "NUM" };
 typedef enum ConstId{ MIPS, VEC, NUM } ConstIdType;
 typedef enum ProcId{ C, G, M } ProcIdType;
 
+#define CMP_SCALE_FACTOR 1000000
+#define BW_SCALE_FACTOR 100000
+//Bandwidth in Mb/s
+const vector< float_t >BANDWIDTH = { 100000, 16000, 1000 };
+const vector< string >BANDWIDTH_NAME = { "CORE->CORE", "CORE->GPU", "CPU->CPU" };
+typedef enum BwId{ CORE, PCIE, NET } BwIdType;
+
+
+
+#define INF 99999999999999999
+
 typedef struct
 {
-	uint32_t bandwidth;
+	float_t bandwidth;
 	string label;
 }TopoEdge;
 
@@ -46,7 +58,7 @@ typedef struct
 	vector< uint32_t > d_ids;
 
 	vector< uint32_t > app_ids;
-	vector< uint32_t > compute_req;
+	uint32_t compute_req;
 
 	double_t comp_time;
 	double_t comm_time;
@@ -60,6 +72,16 @@ typedef adjacency_list< vecS, vecS, undirectedS, TopoNode, TopoEdge > TopologyGr
 // Edge pair type
 // used initally for the construction of the graph edges
 typedef std::pair< int32_t, int32_t > E;
+
+typedef pair< uint32_t, float_t > BwType;
+struct CompareSecond
+{
+    bool operator()( const BwType& left, const BwType& right ) const
+    {
+        return left.second < right.second;
+    }
+};
+
 
 /**
  *  @brief Represents
@@ -116,6 +138,11 @@ class TopoGen
 		 * @brief
 		 */
 		uint32_t level;
+
+		/**
+		 * @brief
+		 */
+		vector< vector< float_t > > *shortest_path;
 
 	// Functions
 	public:
@@ -250,6 +277,24 @@ class TopoGen
 		*	@param
 		*/
 		void GenerateMetisFile( string filename );
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		void ComputeComm();
+
+		/**
+		*	@brief
+		*
+		*	desc
+		*
+		*	@param
+		*/
+		void SetAccuBw( TopoGen *topo_graph_obj );
 };
 
 

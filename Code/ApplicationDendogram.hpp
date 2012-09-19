@@ -34,6 +34,7 @@ class ApplicationDendogram
 		 */
 		vector< vector< ApplicationGraph* > > app_dendogram_obj;
 
+
 	// Functions
 	public:
 		/**

@@ -30,10 +30,11 @@ idx_t* gpmetis( int argc, char **argv )
   params_t *params;
   int status=0;
 
-  //printf( "argc: %d\n", argc );
-    //printf( "gk_optind %d\n", gk_optind );
+  gk_optind = 0;
 
-    gk_optind = 1;
+  //printf( "argc: %d\n", argc );
+  //printf( "gk_optind %d\n", gk_optind );
+  fflush( stdout );
 
     for( i = 0; i < argc; i++ )
     {
@@ -42,6 +43,9 @@ idx_t* gpmetis( int argc, char **argv )
 
 
   params = parse_cmdline(argc, argv);
+  //printf( "gk_optind %d\n", gk_optind );
+  //fflush( stdout );
+  //return NULL;
 
   gk_startcputimer(params->iotimer);
   graph = ReadGraph(params);

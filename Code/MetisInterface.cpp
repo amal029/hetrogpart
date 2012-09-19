@@ -279,16 +279,32 @@ int32_t MetisInterface :: MetisPart( ApplicationGraph *app_graph, uint32_t npart
 	argv.push_back( "-tpwgts=" + f2 );
 	argc++;
 
+
 	app_graph->GenerateMetisFile( f1 );
 	argv.push_back( f1 );
 	argc++;
 
-
 	argv.push_back( lexical_cast< string >( nparts ) );
 	argc++;
 
-	char *arg[] = {  ( char* ) "abc", ( char* ) argv[ 0 ].c_str(), ( char* ) argv[ 1 ].c_str(), ( char* ) argv[ 2 ].c_str() };
-	cout << "INFO: AG Metis call: " << argv[ 0 ].c_str() << " " << argv[ 1 ].c_str() << " "<< argv[ 2 ].c_str() << /*", No of args " << argc <<*/ endl;
+	char **arg = new char*[ 4 * sizeof( char * ) ];
+	arg[ 0 ] = new char[ 20 * sizeof( char ) ];
+	arg[ 1 ] = new char[ ( argv[ 0 ].size() + 1 ) * sizeof( char ) ];
+	arg[ 2 ] = new char[ ( argv[ 1 ].size() + 1 ) * sizeof( char ) ];
+	arg[ 3 ] = new char[ ( argv[ 2 ].size() + 1 ) * sizeof( char ) ];
+
+	strcpy( arg[ 0 ], "gpmetis" );
+	strcpy( arg[ 1 ], argv[ 0 ].c_str() );
+	strcpy( arg[ 2 ], argv[ 1 ].c_str() );
+	strcpy( arg[ 3 ], argv[ 2 ].c_str() );
+
+	arg[ 1 ][ ( argv[ 0 ].size() + 1 ) ] = '\0';
+	arg[ 2 ][ ( argv[ 1 ].size() + 1 ) ] = '\0';
+	arg[ 3 ][ ( argv[ 2 ].size() + 1 ) ] = '\0';
+
+
+	//char *arg[] = {  ( char* ) "abc", ( char* ) argv[ 0 ].c_str(), ( char* ) argv[ 1 ].c_str(), ( char* ) argv[ 2 ].c_str() };
+	cout << "INFO: AG Metis call: " << arg[ 0 ] << " " << arg[ 1 ] << " "<< arg[ 2 ] << " " << arg[ 3 ] << /*", No of args " << argc <<*/ endl;
 
 	idx_t *r_part = gpmetis( argc, arg );
 
@@ -309,6 +325,12 @@ int32_t MetisInterface :: MetisPart( ApplicationGraph *app_graph, uint32_t npart
 	//cout << "finished metis" << endl;
 
 	free( r_part );
+
+	delete[] arg[ 0 ];
+	delete[] arg[ 1 ];
+	delete[] arg[ 2 ];
+	delete[] arg[ 3 ];
+	delete[] arg;
 
 	return 1;
 }

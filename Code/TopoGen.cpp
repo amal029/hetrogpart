@@ -49,6 +49,7 @@ void TopoGen :: Create( uint32_t dim_1_p, uint32_t dim_2_p )
 }
 //end of Create( uint32_t dim_1_p, uint32_t dim_2_p )
 
+
 //TwoAryTwoMesh()
 void TopoGen :: TwoAryTwoMesh()
 {
@@ -156,7 +157,11 @@ void TopoGen :: TwoAryTwoMesh()
 		mesh[ v ].id = index;
 		mesh[ v ].label = "CPU" + lexical_cast< string >( index );
 		mesh[ v ].shape = "square";
-		mesh[ v ].type = C;
+
+		if( rand() % 2 == 0 )
+			mesh[ v ].type = C;
+		else
+			mesh[ v ].type = G;
 		mesh[ v ].ids.push_back( index );
 
 		for( uint32_t i = 0; i < CONST[ mesh[ v ].type ].size(); i++ )
@@ -175,13 +180,17 @@ void TopoGen :: TwoAryTwoMesh()
 		mesh[ v ].compute_power = temp_const_mips * temp_const_vec;
 		mesh[ v ].comp_time = 0;
 		mesh[ v ].comm_time = 0;
+		mesh[ v ].compute_req = 0;
 
 		index++;
 	}
 
 	BGL_FORALL_EDGES( e, mesh, TopologyGraph )
 	{
-		mesh[ e ].bandwidth = 1;
+		//mesh[ e ].bandwidth = BANDWIDTH[ NET ];
+		mesh[ e ].bandwidth = BANDWIDTH[ NET ] + ( rand() % ( ( uint32_t ) BANDWIDTH[ NET ] * 1000 ) );
+		//Cartman was here.
+		//mesh[ e ].bandwidth = 1 + ( rand() % 100 );
 		mesh[ e ].label = "eth";
 		mesh[ e ].label += " " + lexical_cast< string >( mesh[ e ].bandwidth );
 	}
@@ -194,6 +203,8 @@ void TopoGen :: TwoAryTwoMesh()
 	no_of_constraints = CONST[ 0 ].size();
 	no_of_nodes = num_vertices( mesh );
 	no_of_edges = num_edges( mesh );
+
+	ComputeComm();
 
 	PrintGraphViz( "out.dot" );
 	GenerateMetisFile( "met.grf" );
@@ -469,7 +480,10 @@ int32_t TopoGen :: GenerateTopoSubGraph( vector< vector< uint32_t > > *partition
 									break;
 							}
 
-							/*
+                            /**
+                             * Avinash: here is where i calculate comm cost
+                             */
+  							/*
 							 * Search through the new graph and if the edge is already present
 							 * just increase the weight of that edge
 							 */
@@ -495,6 +509,7 @@ int32_t TopoGen :: GenerateTopoSubGraph( vector< vector< uint32_t > > *partition
 							{
 								std::pair< graph_traits< TopologyGraph >::edge_descriptor, bool > edge_pair;
 								edge_pair = add_edge( v_s, v_d, topo_graph_obj->mesh );
+								//Older communication calculation
 								topo_graph_obj->mesh[ edge_pair.first ].bandwidth = mesh[ o_orig ].bandwidth;
 							}
 
@@ -517,6 +532,41 @@ int32_t TopoGen :: GenerateTopoSubGraph( vector< vector< uint32_t > > *partition
 	topo_graph_obj->GenParams();
 
 	return 1;
+}
+
+void TopoGen :: SetAccuBw( TopoGen *topo_graph_obj )
+{
+	BGL_FORALL_EDGES( e, topo_graph_obj->mesh, TopologyGraph )
+	{
+		vector< pair< uint32_t, float_t > > bw_vec;
+
+		for( uint32_t i = 0; i < topo_graph_obj->mesh[ source( e, topo_graph_obj->mesh ) ].ids.size(); i++ )
+		{
+			for( uint32_t j = 0; j < topo_graph_obj->mesh[ target( e, topo_graph_obj->mesh ) ].ids.size(); j++ )
+			{
+				bw_vec.push_back( make_pair( topo_graph_obj->mesh[ target( e, topo_graph_obj->mesh ) ].ids[ j ],
+					shortest_path->at( topo_graph_obj->mesh[ source( e, topo_graph_obj->mesh ) ].ids[ i ] ).at( topo_graph_obj->mesh[ target( e, topo_graph_obj->mesh ) ].ids[ j ] ) ) );
+
+				//cout << bw_vec.back().first << ":" << bw_vec.back().second << " ";
+			}
+		}
+		//cout << endl;
+
+		sort( bw_vec.begin(), bw_vec.end(), bind( &pair< uint32_t, float_t >::first, _1 ) < bind( &pair< uint32_t, float_t >::first, _2 ) );
+		mesh[ e ].bandwidth = 0;
+
+		while( !bw_vec.empty() )
+		{
+			pair< uint32_t, float_t > min_bw = bw_vec.back();
+			while( !bw_vec.empty() && bw_vec.back().first == min_bw.first )
+			{
+				min_bw = min( min_bw, bw_vec.back(), CompareSecond() );
+				bw_vec.pop_back();
+			}
+			//cout << "m=" << min_bw.first << ":" << min_bw.second << " " << endl;
+			topo_graph_obj->mesh[ e ].bandwidth += min_bw.second;
+		}
+	}
 }
 
 void TopoGen :: GenTpWgts( TopoGen *prev_level, vector< vector< vector< float_t >* >* > *tp_wgts_level,
@@ -710,12 +760,81 @@ void TopoGen :: GenerateMetisFile( string filename )
 
 		BGL_FORALL_OUTEDGES( v, e, mesh, TopologyGraph )
 		{
-			output_file << ( mesh[ target( e, mesh ) ].id + 1 ) << " " << mesh[ e ].bandwidth << " ";
+			output_file << ( mesh[ target( e, mesh ) ].id + 1 ) << " " << ( uint32_t ) mesh[ e ].bandwidth << " ";
 		}
 
 		output_file << endl;
 	}
 }
 
+void TopoGen :: ComputeComm()
+{
+	shortest_path = new vector< vector< float_t > >;
+	shortest_path->resize( no_of_nodes );
+
+	for( uint32_t i = 0; i < no_of_nodes; i++ )
+	{
+		shortest_path->at( i ).resize( no_of_nodes );
+	}
+
+	for( uint32_t i = 0; i < no_of_nodes; i++ )
+	{
+		for( uint32_t j = 0; j < no_of_nodes; j++ )
+		{
+			shortest_path->at( i ).at( j ) = INF;
+		}
+	}
+
+	BGL_FORALL_EDGES( e, mesh, TopologyGraph )
+	{
+		shortest_path->at( mesh[ source( e, mesh ) ].id ).at( mesh[ target( e, mesh ) ].id ) = ( mesh[ e ].bandwidth == 0 ? INF : 1 / mesh[ e ].bandwidth );
+		shortest_path->at( mesh[ target( e, mesh ) ].id ).at( mesh[ source( e, mesh ) ].id ) = ( mesh[ e ].bandwidth == 0 ? INF : 1 / mesh[ e ].bandwidth );
+	}
+
+	for( uint32_t k = 0; k < no_of_nodes; k++ )
+	{
+		for( uint32_t i = 0; i < no_of_nodes; i++ )
+		{
+			for( uint32_t j = 0; j < no_of_nodes; j++ )
+			{
+				shortest_path->at( i ).at( j ) = min( shortest_path->at( i ).at( j ), shortest_path->at( i ).at( k ) + shortest_path->at( k ).at( j ) );
+			}
+		}
+	}
+
+	for( uint32_t i = 0; i < no_of_nodes; i++ )
+	{
+		for( uint32_t j = 0; j < no_of_nodes; j++ )
+		{
+			shortest_path->at( i ).at( j ) = ( 1 / shortest_path->at( i ).at( j ) );
+		}
+	}
+
+	for( uint32_t i = 0; i < no_of_nodes; i++ )
+	{
+		for( uint32_t j = 0; j < no_of_nodes; j++ )
+		{
+			if( i == j )
+				shortest_path->at( i ).at( j ) = 0;
+		}
+	}
+	/*
+	cout << "shortest_path" << endl;
+	for( uint32_t i = 0; i < no_of_nodes; i++ )
+	{
+		for( uint32_t j = 0; j < no_of_nodes; j++ )
+		{
+			cout << setprecision( 3 ) << shortest_path->at( i ).at( j ) << " ";
+		}
+		cout << endl;
+	}
+	*/
+}
+
+/* avinash: comm func
+uint32_t TopoGen :: CalculateComm( TopologyGraph orig, TopologyGraph new, uint32_t s_id, uint32_t d_id )
+{
+}
+*/
 
 #endif

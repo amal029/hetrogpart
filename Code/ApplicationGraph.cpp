@@ -72,7 +72,7 @@ int32_t ApplicationGraph :: ReadMetisFormat( string file_name )
 	while( input_file.good() )
 	{
 		string line;
-		vector< uint32_t > tokens;
+		vector< double_t > tokens;
 		getline( input_file, line );
 
 		// Skip delimiters at beginning.
@@ -84,7 +84,7 @@ int32_t ApplicationGraph :: ReadMetisFormat( string file_name )
 		while( string::npos != pos || string::npos != lastPos )
 		{
 			// Found a token, add it to the vector.
-			tokens.push_back( lexical_cast< uint32_t > ( line.substr( lastPos, pos - lastPos ) ) );
+			tokens.push_back( lexical_cast< uint64_t > ( line.substr( lastPos, pos - lastPos ) ) );
 
 			// Skip delimiters.  Note the "not_of"
 			lastPos = line.find_first_not_of( delimiters, pos );
@@ -549,7 +549,8 @@ void ApplicationGraph :: GenerateMetisFile( string filename )
 
 		BGL_FORALL_OUTEDGES( v, e, app_graph, ApplicationGraphType )
 		{
-			output_file << ( app_graph[ target( e, app_graph ) ].d_id + 0 ) << " " << app_graph[ e ].weight << " ";
+			output_file.setf(ios::fixed, ios::floatfield);
+			output_file << ( app_graph[ target( e, app_graph ) ].d_id + 0 ) << " " << ( uint32_t ) app_graph[ e ].weight << " ";
 		}
 
 		output_file << endl;

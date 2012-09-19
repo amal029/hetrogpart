@@ -4,7 +4,7 @@
 # makefile
 #
 
-CPP = g++ -Wall -std=gnu++0x -I/home/servesh/App/boost_1_51_0/include -I/home/servesh/App/metis-old/include/ -g -lm
+CPP = g++ -Wall -std=gnu++0x -I/home/servesh/App/boost_1_51_0/include -I/home/servesh/App/metis-old/include/ -g -lm -lrt
 # -I/home/servesh/App/parmetis-4.0.2/include-I/home/servesh/App/zoltan-3.6/include/
 
 CC = gcc
@@ -56,7 +56,7 @@ ApplicationDendogram.o: makefile ApplicationDendogram.cpp ApplicationDendogram.h
 #ZoltanInterface.o: makefile ZoltanInterface.cpp ZoltanInterface.hpp TopoGen.o ApplicationGraph.o
 #	$(CPP) -c ZoltanInterface.cpp -o ZoltanInterface.o
 
-MetisInterface.o: makefile MetisInterface.cpp MetisInterface.hpp TopoGen.o ApplicationGraph.o $(METIS_O)
+MetisInterface.o: makefile MetisInterface.cpp MetisInterface.hpp TopoGen.o ApplicationGraph.o $(METIS_O) $(METIS_C)
 	$(CPP) -c MetisInterface.cpp -o MetisInterface.o
 
 TopologyDendogram.o: makefile TopologyDendogram.cpp TopologyDendogram.hpp TopoGen.o ApplicationGraph.o

@@ -105,6 +105,7 @@ void ApplicationDendogram :: ConstructDendogram( vector< vector< vector< uint32_
 			parts.clear();
 		}
 		//cout << "Total No of subgraphs " << app_graph_vector.size() << endl;
+		/*
 		for( uint32_t i = 0; i < app_graph_vector.size(); i++ )
 		{
 			if( app_graph_vector[ i ]->no_of_vertices > 0 )
@@ -112,6 +113,7 @@ void ApplicationDendogram :: ConstructDendogram( vector< vector< vector< uint32_
 													"_Subgraph_" + lexical_cast< string >( i )
 													+ ".dot" );
 		}
+		*/
 		cout << endl;
 		app_dendogram_obj.push_back( app_graph_vector );
 	}

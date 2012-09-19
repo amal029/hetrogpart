@@ -11,11 +11,11 @@
 
 
 /*-------------------------------------------------------------------
- * Command-line options 
+ * Command-line options
  *-------------------------------------------------------------------*/
 static struct gk_option long_options[] = {
   {"ptype",          1,      0,      METIS_OPTION_PTYPE},
-  {"objtype",        1,      0,      METIS_OPTION_OBJTYPE}, 
+  {"objtype",        1,      0,      METIS_OPTION_OBJTYPE},
 
   {"ctype",          1,      0,      METIS_OPTION_CTYPE},
   {"iptype",         1,      0,      METIS_OPTION_IPTYPE},
@@ -203,7 +203,7 @@ static char shorthelpstr[][100] = {
 "          use 'gpmetis -help' for a summary of the options.",
 ""
 };
- 
+
 
 
 /*************************************************************************
@@ -343,7 +343,7 @@ params_t *parse_cmdline(int argc, char *argv[])
   }
 
   if (argc-gk_optind != 2) {
-    printf("Missing parameters.");
+    printf("Missing parameters. argc=%d gk_optind=%d", argc, gk_optind );
     for (i=0; strlen(shorthelpstr[i]) > 0; i++)
       printf("%s\n", shorthelpstr[i]);
     exit(0);
@@ -351,8 +351,8 @@ params_t *parse_cmdline(int argc, char *argv[])
 
   params->filename = gk_strdup(argv[gk_optind++]);
   params->nparts   = atoi(argv[gk_optind++]);
-    
-  if (params->nparts < 2) 
+
+  if (params->nparts < 2)
     errexit("The number of partitions should be greater than 1!\n");
 
 
