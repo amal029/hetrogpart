@@ -41,11 +41,17 @@ void TopologyDendogram::CreateTopologyGraph( int dim1, int dim2,
 
 	vector< uint32_t > parts_req;
 	parts_req.push_back( orig_topo_graph.no_of_nodes );
+	topo_graph_vector.push_back( &orig_topo_graph );
 
 	for( uint32_t i = 1; i < dendogram_height; i++ )
 	{
 		parts_req.push_back( orig_topo_graph.no_of_nodes / ( i * 2 ) );
 	}
+
+	//parts_req.push_back( orig_topo_graph.no_of_nodes /  2 );
+	//dendogram_height = 1;
+	//parts_req.push_back( orig_topo_graph.no_of_nodes /  4 );
+
 	parts_req.push_back( 1 );
 	dendogram_height++;
 
@@ -69,7 +75,7 @@ int32_t TopologyDendogram :: BuildDendogram( vector< uint32_t > parts_req,
 	MetisInterface mtn( GRAPH_K_WAY );
 
 	prev_level_graph = &orig_topo_graph;
-	for( uint32_t level = 0; level < dendogram_height; level++ )
+	for( uint32_t level = 1; level < dendogram_height; level++ )
 	{
 		float_t min_dev_compute_power = -1;
 		//cout << "Computing topology for level " << level << endl;
@@ -141,10 +147,12 @@ int32_t TopologyDendogram :: BuildDendogram( vector< uint32_t > parts_req,
 		prev_level_graph = curr_level_graph;
 	}
 
+	/*
 	for( uint32_t i = 0; i < topo_graph_vector.size(); i++ )
 	{
 		topo_graph_vector[ i ]->PrintGraphViz( "Level_" + lexical_cast< string >( i ) + "_TopoGraph.dot" );
 	}
+	*/
 
 	//vector< vector< vector< vector< float_t >* >* >* > tp_wgts_vector;
 	//vector< vector< vector< uint32_t >* >* > parts_vector;
@@ -158,6 +166,10 @@ int32_t TopologyDendogram :: BuildDendogram( vector< uint32_t > parts_req,
 void TopologyDendogram :: GenTpWgts( vector< vector< vector< vector< float_t >* >* >* > *tp_wgts_vector, vector< vector< vector< uint32_t >* >* > *parts_vector )
 {
 	cout << endl << "INFO: Generating TP Weights" << endl;
+	vector< uint32_t > prev_order;
+	vector< uint32_t > curr_order;
+
+	prev_order.push_back( 0 );
 	for( uint32_t i = ( topo_graph_vector.size() - 1 ); i != 0; i-- )
 	{
 		/*
@@ -180,14 +192,17 @@ void TopologyDendogram :: GenTpWgts( vector< vector< vector< vector< float_t >* 
 		tp_wgts = new vector< vector< vector< float_t >* >* >;
 		parts = new vector< vector< uint32_t >* >;
 
-		topo_graph_vector.at( i - 1 )->GenTpWgts( topo_graph_vector.at( i ), tp_wgts, parts );
+		topo_graph_vector.at( i - 1 )->GenTpWgts( topo_graph_vector.at( i ), tp_wgts, parts, &prev_order, &curr_order );
 
 		tp_wgts_vector->push_back( tp_wgts );
 		parts_vector->push_back( parts );
+
+		prev_order = curr_order;
+		curr_order.clear();
 	}
 
 	cout << endl << "Topology Partitions :" << endl;
-
+	/*
 	for( uint32_t k = 0; k < parts_vector->size(); k++ )
 	{
 		cout << "L" << k << " ";
@@ -205,6 +220,52 @@ void TopologyDendogram :: GenTpWgts( vector< vector< vector< vector< float_t >* 
 		}
 		cout << endl;
 	}
+	*/
+
+	for( uint32_t k = 0; k < parts_vector->size(); k++ )
+	{
+		cout << "L" << k << " "<< topo_graph_vector.at( topo_graph_vector.size() - 2 - k )->no_of_nodes << " ";
+		for( uint32_t i = 0; i < parts_vector->at( k )->size(); i++ )
+		{
+			cout << "P" << i << " [";
+			for( uint32_t j = 0; j < parts_vector->at( k )->at( i )->size(); j++ )
+			{
+				cout << " N" << parts_vector->at( k )->at( i )->at( j ) << "(";
+
+				BGL_FORALL_VERTICES( v, topo_graph_vector.at( topo_graph_vector.size() - 2 - k )->mesh, TopologyGraph )
+				{
+					if( topo_graph_vector.at( topo_graph_vector.size() - 2 - k )->mesh[ v ].id == parts_vector->at( k )->at( i )->at( j ) )
+					{
+						for( uint32_t l = 0; l < topo_graph_vector.at( topo_graph_vector.size() - 2 - k )->mesh[ v ].ids.size(); l++ )
+						{
+							cout << topo_graph_vector.at( topo_graph_vector.size() - 2 - k )->mesh[ v ].ids[ l ];
+
+							if( l < topo_graph_vector.at( topo_graph_vector.size() - 2 - k )->mesh[ v ].ids.size() - 1 )
+								cout << ",";
+						}
+						break;
+					}
+				}
+
+				cout << ") ";
+			}
+			cout << " ]";
+
+			if( i < ( parts_vector->at( k )->size() - 1 ) )
+				cout << " || ";
+		}
+		cout << endl;
+	}
+
+
+	for( int32_t i = topo_graph_vector.size() - 2; i >= 0; i-- )
+	{
+		//cout << topo_graph_vector.at( i )->no_of_nodes << endl;
+		BGL_FORALL_VERTICES( v, topo_graph_vector.at( i )->mesh, TopologyGraph )
+		{
+			//if( topo_graph_vector.at( i )->mesh)
+		}
+	}
 
 	tp_wgts_p = tp_wgts_vector;
 	parts_p = parts_vector;
@@ -220,6 +281,12 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 			n_id.push_back( parts_p->at( parts_p->size() - 1 )->at( j )->at( k ) );
 		}
 	}
+
+	for( uint32_t i = 0; i < n_id.size(); i++ )
+	{
+		cout << n_id[ i ] << " ";
+	}
+	cout << endl;
 
 	if( n_id.size() !=  app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).size() )
 	{
@@ -241,8 +308,10 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 
 		if( o_ids.size() > 1 )
 		{
-			cout << "INFO: Selecting node id " << o_ids[ 0 ];
+			cout << "ERROR: Selecting node id " << o_ids[ 0 ];
 			cout << " out of " << o_ids.size() << " nodes" << endl;
+
+			exit( 1 );
 		}
 
 		if( o_ids.size() < 1 )
@@ -266,16 +335,32 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 										( ceil( app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ VEC ] /
 												( orig_topo_graph.mesh[ v ].constraint[ VEC ] ) ) ) ) /
 									( orig_topo_graph.mesh[ v ].constraint[ MIPS ] * CMP_SCALE_FACTOR );
-						/*
-						cout << "C_T: " << ( app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ MIPS ] +
+
+						cout << "A_ID: " << app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].id;
+						cout << " -> T_ID: " << orig_topo_graph.mesh[ v ].id;
+						cout << " C_MIPS: " << ( app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ MIPS ] );
+						cout << " C_VEC: " << app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ VEC ];
+						cout << " T_VEC: " << orig_topo_graph.mesh[ v ].constraint[ VEC ];
+						cout << " T_MIPS: " << orig_topo_graph.mesh[ v ].constraint[ MIPS ];
+						cout << " C_T: " << ( app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ MIPS ] +
 										( ceil( app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ VEC ] /
 												( orig_topo_graph.mesh[ v ].constraint[ VEC ] ) ) ) ) /
-									( orig_topo_graph.mesh[ v ].constraint[ MIPS ] * CMP_SCALE_FACTOR ) << endl;*/
+									( orig_topo_graph.mesh[ v ].constraint[ MIPS ] * CMP_SCALE_FACTOR ) << endl;
+
 					}
 					else
 					{
 						orig_topo_graph.mesh[ v ].comp_time += app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ MIPS ] /
 									( orig_topo_graph.mesh[ v ].constraint[ MIPS ] * CMP_SCALE_FACTOR );
+
+						cout << "A_ID: " << app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].id;
+						cout << " -> T_ID: " << orig_topo_graph.mesh[ v ].id;
+						cout << " C_MIPS: " <<
+						app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ MIPS ] << " T_MIPS: " <<
+									( orig_topo_graph.mesh[ v ].constraint[ MIPS ] * CMP_SCALE_FACTOR );
+						cout << " C_T: " << app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ MIPS ] /
+									( orig_topo_graph.mesh[ v ].constraint[ MIPS ] * CMP_SCALE_FACTOR ) << endl;
+
 					}
 
 
@@ -286,7 +371,6 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 						c_pow *= app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ k ] == 0
 									? 1 : app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ k ];
 					}
-
 
 					orig_topo_graph.mesh[ v ].compute_req += c_pow;
 					*/
@@ -413,14 +497,16 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 		orig_topo_graph.mesh[ v ].label += " COMP_T=" + lexical_cast< string >( orig_topo_graph.mesh[ v ].comp_time );
 		orig_topo_graph.mesh[ v ].label += " COMM_T=" + lexical_cast< string >( orig_topo_graph.mesh[ v ].comm_time );
 
+		cout << "ID= " <<  orig_topo_graph.mesh[ v ].id << ", Comp=" <<  orig_topo_graph.mesh[ v ].comp_time << ", Comm=" <<  orig_topo_graph.mesh[ v ].comm_time << endl;
+
 		orig_topo_graph.mesh[ v ].comp_time = 0; orig_topo_graph.mesh[ v ].comm_time = 0;
 	}
 
 	orig_topo_graph.PrintGraphViz( "Level_Topo_App_Map.dot" );
 
 	cout << "Hurray!!! Everything Done!!! " << endl;
-	cout << "The max app latency is " << tot_time << "s" << endl;
-	out << "The max app latency is " << tot_time << "s" << endl;
+	cout << fixed << "The max app latency is " << tot_time << "s" << endl;
+	out << fixed <<"The max app latency is " << tot_time << "s" << endl;
 
 	time = tot_time;
 

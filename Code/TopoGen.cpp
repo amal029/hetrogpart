@@ -159,17 +159,34 @@ void TopoGen :: TwoAryTwoMesh()
 		mesh[ v ].shape = "square";
 
 		if( rand() % 2 == 0 )
-			mesh[ v ].type = C;
-		else
 			mesh[ v ].type = G;
+		else
+			mesh[ v ].type = C;
 		mesh[ v ].ids.push_back( index );
 
 		for( uint32_t i = 0; i < CONST[ mesh[ v ].type ].size(); i++ )
 		{
-			mesh[ v ].constraint.push_back( CONST[ mesh[ v ].type ][ i ] );
-			mesh[ v ].label += "   " + lexical_cast< string >( CONST_NAME[ i ] ) + " " +
-								lexical_cast< string >( CONST[ mesh[ v ].type ][ i ] );
+			//mesh[ v ].constraint.push_back( CONST[ mesh[ v ].type ][ i ] );
+
+			if (mesh[ v ].type == C) {
+				if (i == 0)
+					mesh[ v ].constraint.push_back(10 + (rand() % 100));
+				else
+					mesh[ v ].constraint.push_back(100000 + (rand() % 1000001));
+			}
+			else {
+				if (i == 1)
+					mesh[ v ].constraint.push_back(100 + (rand() % 1001));
+				else
+					mesh[ v ].constraint.push_back(100000 + (rand() % 1000001));
+			}
+
+			//mesh[ v ].label += "   " + lexical_cast< string >( CONST_NAME[ i ] ) + " " +
+				//				lexical_cast< string >( CONST[ mesh[ v ].type ][ i ] );
+			mesh[ v ].label += "  " + lexical_cast< string >( CONST_NAME[ i ] ) + " " +
+								lexical_cast< string >( mesh[ v ].constraint[ i ] );
 		}
+        mesh[ v ].constraint[ NUM ] = 1;
 
 		uint32_t temp_const_mips = CONST[ mesh[ v ].type ][ MIPS ];
 		uint32_t temp_const_vec = CONST[ mesh[ v ].type ][ VEC ];
@@ -206,7 +223,7 @@ void TopoGen :: TwoAryTwoMesh()
 
 	ComputeComm();
 
-	PrintGraphViz( "out.dot" );
+	//PrintGraphViz( "out.dot" );
 	GenerateMetisFile( "met.grf" );
 }
 //end of TwoAryTwoMesh()
@@ -480,9 +497,9 @@ int32_t TopoGen :: GenerateTopoSubGraph( vector< vector< uint32_t > > *partition
 									break;
 							}
 
-                            /**
-                             * Avinash: here is where i calculate comm cost
-                             */
+							/**
+							 * Avinash: here is where i calculate comm cost
+							 */
   							/*
 							 * Search through the new graph and if the edge is already present
 							 * just increase the weight of that edge
@@ -547,10 +564,12 @@ void TopoGen :: SetAccuBw( TopoGen *topo_graph_obj )
 				bw_vec.push_back( make_pair( topo_graph_obj->mesh[ target( e, topo_graph_obj->mesh ) ].ids[ j ],
 					shortest_path->at( topo_graph_obj->mesh[ source( e, topo_graph_obj->mesh ) ].ids[ i ] ).at( topo_graph_obj->mesh[ target( e, topo_graph_obj->mesh ) ].ids[ j ] ) ) );
 
-				//cout << bw_vec.back().first << ":" << bw_vec.back().second << " ";
+				if( DEBUG_SHORT_PATH )
+					cout << bw_vec.back().first << ":" << bw_vec.back().second << " ";
 			}
 		}
-		//cout << endl;
+		if( DEBUG_SHORT_PATH )
+			cout << endl;
 
 		sort( bw_vec.begin(), bw_vec.end(), bind( &pair< uint32_t, float_t >::first, _1 ) < bind( &pair< uint32_t, float_t >::first, _2 ) );
 		mesh[ e ].bandwidth = 0;
@@ -563,14 +582,21 @@ void TopoGen :: SetAccuBw( TopoGen *topo_graph_obj )
 				min_bw = min( min_bw, bw_vec.back(), CompareSecond() );
 				bw_vec.pop_back();
 			}
-			//cout << "m=" << min_bw.first << ":" << min_bw.second << " " << endl;
+			if( DEBUG_SHORT_PATH )
+				cout << "m=" << min_bw.first << ":" << min_bw.second << " ";
 			topo_graph_obj->mesh[ e ].bandwidth += min_bw.second;
 		}
+
+		if( DEBUG_SHORT_PATH )
+			cout << topo_graph_obj->mesh[ source( e, topo_graph_obj->mesh ) ].id << "->" <<  topo_graph_obj->mesh[ target( e, topo_graph_obj->mesh ) ].id << ":" << topo_graph_obj->mesh[ e ].bandwidth << endl;
+
+		mesh[ e ].label = " " + lexical_cast< string >( mesh[ e ].bandwidth );
 	}
 }
 
 void TopoGen :: GenTpWgts( TopoGen *prev_level, vector< vector< vector< float_t >* >* > *tp_wgts_level,
-				vector< vector< uint32_t >* > *parts_level )
+				vector< vector< uint32_t >* > *parts_level, vector< uint32_t > *prev_level_order,
+				vector< uint32_t > *curr_level_order )
 {
 	if( prev_level == NULL || this == NULL )
 	{
@@ -648,36 +674,70 @@ void TopoGen :: GenTpWgts( TopoGen *prev_level, vector< vector< vector< float_t 
 	cout << endl;
 	cout << endl;
 	*/
-
-	BGL_FORALL_VERTICES( p_v, prev_level->mesh, TopologyGraph )
+	/*
+	cout << "prev" << endl;
+	BGL_FORALL_VERTICES( v, prev_level->mesh, TopologyGraph )
 	{
-		vector< vector< float_t >* > *tp_wgts_nodes = new vector< vector< float_t >* >;
-		vector< uint32_t > *parts_nodes = new vector< uint32_t >;
-
-		for( uint32_t n_id = 0; n_id < prev_level->mesh[ p_v ].d_ids.size() ; n_id++ )
+		cout << prev_level->mesh[ v ].id << " d:";
+		for( uint32_t i = 0; i < prev_level->mesh[ v ].d_ids.size(); i++ )
 		{
-			vector< float_t > *tp_wgts = new vector< float_t >;
-
-			BGL_FORALL_VERTICES( v, mesh, TopologyGraph )
-			{
-				if( mesh[ v ].id == prev_level->mesh[ p_v ].d_ids[ n_id ] )
-				{
-					//fill each node's contraints
-					for( uint cst_id = 0; cst_id < mesh[ v ].constraint.size(); cst_id++ )
-					{
-						tp_wgts->push_back( lexical_cast< float_t >( mesh[ v ].constraint[ cst_id ] ) );
-					}
-					parts_nodes->push_back( mesh[ v ].id );
-
-					break;
-				}
-			}
-			tp_wgts_nodes->push_back( tp_wgts );
+			cout << prev_level->mesh[ v ].d_ids[ i ] << " ";
 		}
+		cout << endl;
+	}
 
-		//fill the partitions
-		tp_wgts_level->push_back( tp_wgts_nodes );
-		parts_level->push_back( parts_nodes );
+	cout << "curr" << endl;
+	BGL_FORALL_VERTICES( v, mesh, TopologyGraph )
+	{
+		cout << mesh[ v ].id << " ";// << " d:";
+		for( uint32_t i = 0; i < mesh[ v ].d_ids.size(); i++ )
+		{
+			//cout << mesh[ v ].d_ids[ i ] << " ";
+		}
+		//cout << endl;
+	}
+	cout << endl;
+	*/
+
+	for( uint32_t pl = 0; pl < prev_level_order->size(); pl++ )
+	{
+		BGL_FORALL_VERTICES( p_v, prev_level->mesh, TopologyGraph )
+		{
+			if( prev_level_order->at( pl ) ==  prev_level->mesh[ p_v ].id )
+			{
+				vector< vector< float_t >* > *tp_wgts_nodes = new vector< vector< float_t >* >;
+				vector< uint32_t > *parts_nodes = new vector< uint32_t >;
+
+				for( uint32_t n_id = 0; n_id < prev_level->mesh[ p_v ].d_ids.size() ; n_id++ )
+				{
+					vector< float_t > *tp_wgts = new vector< float_t >;
+
+					BGL_FORALL_VERTICES( v, mesh, TopologyGraph )
+					{
+						if( mesh[ v ].id == prev_level->mesh[ p_v ].d_ids[ n_id ] )
+						{
+							//fill each node's contraints
+							for( uint cst_id = 0; cst_id < mesh[ v ].constraint.size(); cst_id++ )
+							{
+								tp_wgts->push_back( lexical_cast< float_t >( mesh[ v ].constraint[ cst_id ] ) );
+							}
+							parts_nodes->push_back( mesh[ v ].id );
+							//cout << mesh[ v ].id << " ";
+							curr_level_order->push_back( mesh[ v ].id );
+
+							break;
+						}
+					}
+					tp_wgts_nodes->push_back( tp_wgts );
+				}
+				//cout << endl;
+
+				//fill the partitions
+				tp_wgts_level->push_back( tp_wgts_nodes );
+				parts_level->push_back( parts_nodes );
+				break;
+			}
+		}
 	}
 
 	/*
@@ -818,17 +878,27 @@ void TopoGen :: ComputeComm()
 				shortest_path->at( i ).at( j ) = 0;
 		}
 	}
-	/*
-	cout << "shortest_path" << endl;
-	for( uint32_t i = 0; i < no_of_nodes; i++ )
+
+	if( DEBUG_SHORT_PATH )
 	{
-		for( uint32_t j = 0; j < no_of_nodes; j++ )
+		cout << "shortest_path" << endl << "    ";
+		for( uint32_t i = 0; i < no_of_nodes; i++ )
 		{
-			cout << setprecision( 3 ) << shortest_path->at( i ).at( j ) << " ";
+			cout << setw( 6 ) << i << " ";
 		}
 		cout << endl;
+		for( uint32_t i = 0; i < no_of_nodes; i++ )
+		{
+			cout << setw(2) << i << ": ";
+			for( uint32_t j = 0; j < no_of_nodes; j++ )
+			{
+				cout << setw( 6 ) << setprecision( 4 ) << shortest_path->at( i ).at( j ) << " ";
+			}
+			cout << endl;
+		}
 	}
-	*/
+
+
 }
 
 /* avinash: comm func

@@ -20,6 +20,12 @@
 #include <fstream>
 #include <vector>
 
+#ifdef SHORT_PATH
+	#define DEBUG_SHORT_PATH 1
+#else
+	#define DEBUG_SHORT_PATH 0
+#endif
+
 using namespace boost;
 using namespace std;
 
@@ -28,13 +34,12 @@ const vector< string >CONST_NAME = { "MIPS", "VEC", "NUM" };
 typedef enum ConstId{ MIPS, VEC, NUM } ConstIdType;
 typedef enum ProcId{ C, G, M } ProcIdType;
 
-#define CMP_SCALE_FACTOR 1000000
-#define BW_SCALE_FACTOR 100000
+#define CMP_SCALE_FACTOR 1
+#define BW_SCALE_FACTOR 1000
 //Bandwidth in Mb/s
-const vector< float_t >BANDWIDTH = { 100000, 16000, 1000 };
+const vector< float_t >BANDWIDTH = { 100000, 16000, 1 };
 const vector< string >BANDWIDTH_NAME = { "CORE->CORE", "CORE->GPU", "CPU->CPU" };
 typedef enum BwId{ CORE, PCIE, NET } BwIdType;
-
 
 
 #define INF 99999999999999999
@@ -267,7 +272,8 @@ class TopoGen
 		*	@param
 		*/
 		void GenTpWgts( TopoGen *prev_level, vector< vector< vector< float_t >* >* > *tp_wgts_level,
-				vector< vector< uint32_t >* > *parts_level );
+				vector< vector< uint32_t >* > *parts_level, vector< uint32_t > *prev_level_order,
+				vector< uint32_t > *curr_level_order );
 
 		/**
 		*	@brief

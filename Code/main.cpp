@@ -30,13 +30,14 @@ static double us_diff( struct timespec start, struct timespec end )
 //main()
 int main( int argc, char **argv )
 {
+	cout  << fixed;
 	if( argc < 4 )
 	{
 		cout << "No of options specified is not valid" << endl;
 		cout << "Usage: application_graph x_dim_topo y_dim_topo" << endl;
 		return -1;
 	}
-	srand( time( 0 ) );
+	srand( 1 );
 
 	struct timespec start, end;
 
@@ -75,7 +76,7 @@ int main( int argc, char **argv )
 	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	float_t app_lat_time = 0;
-	for( uint32_t kk = 0; kk < 10; kk++ )
+	for( uint32_t kk = 0; kk < 1; kk++ )
 	{
 		ApplicationDendogram a;
 

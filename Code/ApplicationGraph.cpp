@@ -557,4 +557,39 @@ void ApplicationGraph :: GenerateMetisFile( string filename )
 	}
 }
 
+void ApplicationGraph :: GenerateMetisFileAddDummyNode( string filename )
+{
+	ofstream output_file;
+	output_file.open( filename.c_str() );
+
+	output_file << no_of_vertices + 2 << " " << no_of_edges + 1 << " 011 " << no_of_constraints << endl;
+
+	uint32_t m_id = 1;
+	BGL_FORALL_VERTICES( v, app_graph, ApplicationGraphType )
+	{
+		for( uint32_t i = 0; i < no_of_constraints; i++ )
+			output_file << lexical_cast< unsigned long >( app_graph[ v ].constraint[ i ] ) << " ";
+
+		BGL_FORALL_OUTEDGES( v, e, app_graph, ApplicationGraphType )
+		{
+			output_file.setf(ios::fixed, ios::floatfield);
+			output_file << ( app_graph[ target( e, app_graph ) ].d_id + 0 ) << " " << ( uint32_t ) app_graph[ e ].weight << " ";
+		}
+
+		output_file << endl;
+		m_id = app_graph[ v ].d_id;
+	}
+
+	for( uint32_t i = 0; i < no_of_constraints; i++ )
+			output_file << 0 << " ";
+
+	output_file << "1 " << m_id + 1 << endl;
+
+
+	for( uint32_t i = 0; i < no_of_constraints; i++ )
+			output_file << 0 << " ";
+
+	output_file << "1 " << m_id << endl;
+}
+
 #endif

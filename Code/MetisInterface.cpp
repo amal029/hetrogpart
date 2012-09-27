@@ -181,20 +181,25 @@ int32_t MetisInterface :: PartitionGraph( ApplicationGraph *app_graph_obj, uint3
 		d_partitions.at( 0 ).push_back( app_graph_obj->app_graph[ v ].d_id );
 	}
 
+
 	if( nparts == 1 )
 	{
 		cout << "INFO: Requesting a single partition" << endl;
 		return 1;
 	}
 
-	if( num_edges( app_graph_obj->app_graph ) < 1 ||
-			num_vertices( app_graph_obj->app_graph ) < 1 )
-	{
-		cout << "ERROR: Cannot partition a graph with zero edges or vertices" << endl;
-		return -1;
-	}
 
 	vector< real_t > tpwgts;
+
+	if( //num_edges( app_graph_obj->app_graph ) < 1 ||
+			num_vertices( app_graph_obj->app_graph ) < 1 )
+	{
+		cout << "ERROR: Cannot partition a graph with zero edges or vertices, found "
+			<< num_vertices( app_graph_obj->app_graph ) << "Vertices "
+			<< num_edges( app_graph_obj->app_graph ) << " Edges"<< endl;
+
+		return -1;
+	}
 
 	if( tp_wgts->size() > 0 )
 	//if( 0 )
@@ -204,7 +209,7 @@ int32_t MetisInterface :: PartitionGraph( ApplicationGraph *app_graph_obj, uint3
 			cout << "tpwgts : " ;
 			for( uint32_t i = 0; i < tpwgts.size(); i++ )
 			{
-				cout << setprecision( 2 ) << tpwgts[ i ] << " ";
+				cout << tpwgts[ i ] << " ";
 			}
 			cout << endl;
 		}
@@ -260,7 +265,7 @@ int32_t MetisInterface :: MetisPart( ApplicationGraph *app_graph, uint32_t npart
 		uint32_t c_index = 0;
 		for( uint32_t i = 0; i < tpwgts->size(); i++ )
 		{
-			tpwgt_file << index << ":" << c_index << " = " << tpwgts->at( i ) << endl;
+			tpwgt_file << fixed << index << ":" << c_index << " = " << tpwgts->at( i ) << endl;
 
 			if( c_index < ( n_cnstr - 1 ) )
 			{
@@ -279,8 +284,10 @@ int32_t MetisInterface :: MetisPart( ApplicationGraph *app_graph, uint32_t npart
 	argv.push_back( "-tpwgts=" + f2 );
 	argc++;
 
-
-	app_graph->GenerateMetisFile( f1 );
+	if( num_edges( app_graph->app_graph ) < 1 )
+		app_graph->GenerateMetisFileAddDummyNode( f1 );
+	else
+		app_graph->GenerateMetisFile( f1 );
 	argv.push_back( f1 );
 	argc++;
 
@@ -314,13 +321,13 @@ int32_t MetisInterface :: MetisPart( ApplicationGraph *app_graph, uint32_t npart
 		return -1;
 	}
 
-	cout << "Parts: ";
+	//~ cout << "Parts: ";
 	for( uint32_t i = 0; i < app_graph->no_of_vertices; i++ )
 	{
-		cout << r_part[ i ] << " ";
+		//~ cout << r_part[ i ] << " ";
 		partitions->push_back( r_part[ i ] );
 	}
-	cout << endl;
+	//~ cout << endl;
 
 	//cout << "finished metis" << endl;
 

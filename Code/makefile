@@ -7,6 +7,8 @@
 CPP = g++ -Wall -std=gnu++0x -I/home/servesh/App/boost_1_51_0/include -I/home/servesh/App/metis-old/include/ -g -lm -lrt
 # -I/home/servesh/App/parmetis-4.0.2/include-I/home/servesh/App/zoltan-3.6/include/
 
+CPPFLAGS =
+
 CC = gcc
 CC_FLAGS = -DSVNINFO="0"
 
@@ -25,39 +27,46 @@ RM = rm -f -v
 METIS_C = $(wildcard metis/*.c)
 METIS_O = $(foreach f, $(METIS_C), $(notdir $(basename $(f))).o)
 
+#debug-shortpath: makefile TopoGen.cpp TopoGen.hpp
+#	$(CPP) ${CPPFLAGS} -c TopoGen.cpp -DSHORT_PATH  -o TopoGen.o
+#	$(CPP) ${CPPFLAGS} $(OBJ) ${LINK} -o Run.x
+
 all: all-before Run all-after
 
 clean: clean-custom
 	${RM} $(OBJ)
 	${RM} Run.x
 	${RM} ops/*.*
+	${RM} rm -rf *.part.*
+	${RM} rm -rf Level_*
+
 
 clean-ops:
 	${RM} Level*
 
 Run: $(OBJ)
-	$(CPP) $(OBJ) ${LINK} -o Run.x
+	$(CPP) ${CPPFLAGS} $(OBJ) ${LINK} -o Run.x
 
 %.o: metis/%.c makefile
 	$(CC) $(CC_FLAGS) -Imetis/GKlib -Imetis -Imetis/libmetis -c $< -o $@
 
 main.o: makefile main.cpp
-	$(CPP) -c main.cpp -o main.o
+	$(CPP) ${CPPFLAGS} -c main.cpp -o main.o
 
 TopoGen.o: makefile TopoGen.cpp TopoGen.hpp
-	$(CPP) -c TopoGen.cpp -o TopoGen.o
+	$(CPP) ${CPPFLAGS} -c TopoGen.cpp -o TopoGen.o
 
 ApplicationGraph.o: makefile ApplicationGraph.cpp ApplicationGraph.hpp
-	$(CPP) -c ApplicationGraph.cpp -o ApplicationGraph.o
+	$(CPP) ${CPPFLAGS} -c ApplicationGraph.cpp -o ApplicationGraph.o
 
 ApplicationDendogram.o: makefile ApplicationDendogram.cpp ApplicationDendogram.hpp ApplicationGraph.o TopologyDendogram.o
-	$(CPP) -c ApplicationDendogram.cpp -o ApplicationDendogram.o
+	$(CPP) ${CPPFLAGS} -c ApplicationDendogram.cpp -o ApplicationDendogram.o
 
 #ZoltanInterface.o: makefile ZoltanInterface.cpp ZoltanInterface.hpp TopoGen.o ApplicationGraph.o
 #	$(CPP) -c ZoltanInterface.cpp -o ZoltanInterface.o
 
 MetisInterface.o: makefile MetisInterface.cpp MetisInterface.hpp TopoGen.o ApplicationGraph.o $(METIS_O) $(METIS_C)
-	$(CPP) -c MetisInterface.cpp -o MetisInterface.o
+	$(CPP) ${CPPFLAGS} -c MetisInterface.cpp -o MetisInterface.o
 
 TopologyDendogram.o: makefile TopologyDendogram.cpp TopologyDendogram.hpp TopoGen.o ApplicationGraph.o
-	$(CPP) -c TopologyDendogram.cpp -o TopologyDendogram.o
+	$(CPP) ${CPPFLAGS} -c TopologyDendogram.cpp -o TopologyDendogram.o

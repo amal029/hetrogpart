@@ -192,6 +192,8 @@ class ApplicationGraph
 
 		void GenerateMetisFile( string filename );
 
+		void GenerateMetisFileAddDummyNode( string filename );
+
 	private:
 };
 
