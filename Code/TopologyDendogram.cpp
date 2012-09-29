@@ -282,16 +282,21 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 		}
 	}
 
-	for( uint32_t i = 0; i < n_id.size(); i++ )
-	{
-		cout << n_id[ i ] << " ";
-	}
-	cout << endl;
+	//~ for( uint32_t i = 0; i < n_id.size(); i++ )
+	//~ {
+		//~ cout << n_id[ i ] << " ";
+	//~ }
+	//~ cout << endl;
 
 	if( n_id.size() !=  app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).size() )
 	{
 		cout << "Error: There is something obviously wrong!!! NO_NODES=" << n_id.size();
 		cout << " NO_APP_PARTS=" << app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).size() << endl;
+	}
+
+	BGL_FORALL_VERTICES( v, orig_topo_graph.mesh, TopologyGraph )
+	{
+		orig_topo_graph.mesh[ v ].app_id_ref = new vector< graph_traits< ApplicationGraphType >::vertex_descriptor >;
 	}
 
 	for( uint32_t i = 0; i < app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).size(); i++ )
@@ -317,18 +322,38 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 		if( o_ids.size() < 1 )
 		{
 			cout << "ERROR: No original ids found" << endl;
-			continue;
+			exit( 1 );
 		}
 
 		BGL_FORALL_VERTICES( v, orig_topo_graph.mesh, TopologyGraph )
 		{
 			if( orig_topo_graph.mesh[ v ].id == o_ids[ 0 ] )
 			{
-				//orig_topo_graph.mesh[ v ].compute_req = app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->const_wgt_tot;
+				//~ orig_topo_graph.mesh[ v ].compute_req = app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->const_wgt_tot;
+				bool found = false;
 				BGL_FORALL_VERTICES( a, app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph, ApplicationGraphType )
 				{
-					orig_topo_graph.mesh[ v ].app_ids.push_back( app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].id );
+					//~ cout << "Search: " << app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].id << endl;
+					BGL_FORALL_VERTICES( a_orig, app_dendogram_obj->at( 0 ).at( 0 )->app_graph, ApplicationGraphType )
+					{
+						if( app_dendogram_obj->at( 0 ).at( 0 )->app_graph[ a_orig ].id == app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].id )
+						{
+							orig_topo_graph.mesh[ v ].app_id_ref->push_back( a_orig );
 
+							//~ cout << "Found: " << app_dendogram_obj->at( 0 ).at( 0 )->app_graph[ a_orig ].id << endl;
+
+							found = true;
+							break;
+						}
+					}
+
+					if( !found )
+					{
+						cout << "ERROR: Subgraph Id not found in original application graph" << endl;
+						exit( 1 );
+					}
+					/*
+					orig_topo_graph.mesh[ v ].app_ids.push_back( app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].id );
 					if( app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint.size() == 2 )
 					{
 						orig_topo_graph.mesh[ v ].comp_time += ( app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ MIPS ] +
@@ -363,16 +388,13 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 
 					}
 
-
-					/*
-					float_t c_pow = 1;
-					for( uint32_t k = 0; k < app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint.size(); k++ )
-					{
-						c_pow *= app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ k ] == 0
-									? 1 : app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ k ];
-					}
-
-					orig_topo_graph.mesh[ v ].compute_req += c_pow;
+					//~ float_t c_pow = 1;
+					//~ for( uint32_t k = 0; k < app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint.size(); k++ )
+					//~ {
+						//~ c_pow *= app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ k ] == 0
+									//~ ? 1 : app_dendogram_obj->at( app_dendogram_obj->size() - 1 ).at( i )->app_graph[ a ].constraint[ k ];
+					//~ }
+					//~ orig_topo_graph.mesh[ v ].compute_req += c_pow;
 					*/
 				}
 				break;
@@ -380,6 +402,7 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 		}
 	}
 
+	/*
 	ApplicationGraph *app = app_dendogram_obj->at( 0 ).at( 0 );
 
 	BGL_FORALL_VERTICES( v, orig_topo_graph.mesh, TopologyGraph )
@@ -428,6 +451,7 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 			}
 		}
 	}
+	*/
 
 
 	/*
@@ -458,6 +482,83 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 		}
 	}
 	*/
+	CalculateCost( app_dendogram_obj );
+	PrintMap( app_dendogram_obj );
+
+	PostPass( app_dendogram_obj );
+}
+
+void TopologyDendogram :: PostPass( vector< vector< ApplicationGraph* > > *app_dendogram_obj )
+{
+	ApplicationGraph *app = app_dendogram_obj->at( 0 ).at( 0 );
+	vector< AppVertex > moved_app_nodes;
+
+	bool run = true;
+	while( run )
+	{
+		vector< pair< TopoVertex, double_t > > curr_cost;
+		double_t max_cost = 0;
+		TopoVertex max_node = 0;
+		BGL_FORALL_VERTICES( v, orig_topo_graph.mesh, TopologyGraph )
+		{
+			curr_cost.push_back( make_pair( v, orig_topo_graph.mesh[ v ].comp_time + orig_topo_graph.mesh[ v ].comm_time ) );
+		}
+
+		sort( curr_cost.begin(), curr_cost.end(),
+				bind( &pair< TopoVertex, double_t >::second, _1 ) <
+				bind( &pair< TopoVertex, double_t >::second, _2 ) );
+
+		max_cost = curr_cost[ curr_cost.size() - 1 ].second;
+		max_node = curr_cost[ curr_cost.size() - 1 ].first;
+		cout << "INFO: Max res time of " << max_cost << " found on " << orig_topo_graph.mesh[ max_node ].id << endl;
+
+		if( max_cost == 0 )
+		{
+			break;
+		}
+
+		double_t max_app_cost = 0;
+		uint32_t max_app_ref_id = 0;
+		for( uint32_t i = 0; i < orig_topo_graph.mesh[ max_node ].app_id_ref->size(); i++ )
+		{
+			double_t c_time = AppNodeLat( app, orig_topo_graph.mesh[ max_node ].app_id_ref->at( i ), &orig_topo_graph, max_node );
+			if( max_app_cost < c_time )
+			{
+				max_app_cost = c_time;
+				max_app_ref_id = i;
+			}
+		}
+		cout << "INFO: Max app time of " << max_app_cost << " found on " << app->app_graph[ orig_topo_graph.mesh[ max_node ].app_id_ref->at( max_app_ref_id ) ].id << endl;
+
+
+
+		run = false;
+
+	}
+}
+
+double_t TopologyDendogram :: AppNodeLat( ApplicationGraph *app, AppVertex a_v, TopoGen *topo, TopoVertex t_v )
+{
+	double_t c_time = 0;
+	if( app->app_graph[ a_v ].constraint.size() == 2 )
+	{
+		c_time = ( app->app_graph[ a_v ].constraint[ MIPS ] +
+						( ceil( app->app_graph[ a_v ].constraint[ VEC ] /
+								( topo->mesh[ t_v ].constraint[ VEC ] ) ) ) ) /
+					( topo->mesh[ t_v ].constraint[ MIPS ] * CMP_SCALE_FACTOR );
+	}
+	else
+	{
+		c_time =  app->app_graph[ a_v ].constraint[ MIPS ] /
+					( topo->mesh[ t_v ].constraint[ MIPS ] * CMP_SCALE_FACTOR );
+	}
+
+	return c_time;
+}
+
+void TopologyDendogram :: PrintMap( vector< vector< ApplicationGraph* > > *app_dendogram_obj )
+{
+	ApplicationGraph *app = app_dendogram_obj->at( 0 ).at( 0 );
 
 	fstream out;
 	out.open( "Map.out", fstream::out | fstream::app );
@@ -484,22 +585,22 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 			tot_time = ( orig_topo_graph.mesh[ v ].comp_time + orig_topo_graph.mesh[ v ].comm_time );
 		}
 
-
 		out << "N" << orig_topo_graph.mesh[ v ].id + 1 << " <- ";
 		orig_topo_graph.mesh[ v ].label += " A_IDs:";
-		for( uint32_t i = 0; i < orig_topo_graph.mesh[ v ].app_ids.size(); i++ )
+		for( uint32_t i = 0; i < orig_topo_graph.mesh[ v ].app_id_ref->size(); i++ )
 		{
-			orig_topo_graph.mesh[ v ].label +=  " " + lexical_cast< string >( orig_topo_graph.mesh[ v ].app_ids[ i ] );
-			out <<  orig_topo_graph.mesh[ v ].app_ids[ i ] << ", ";
+			orig_topo_graph.mesh[ v ].label +=  " " + lexical_cast< string >( app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].id );
+			out << app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].id << ", ";
 		}
 		out << endl;
 
 		orig_topo_graph.mesh[ v ].label += " COMP_T=" + lexical_cast< string >( orig_topo_graph.mesh[ v ].comp_time );
 		orig_topo_graph.mesh[ v ].label += " COMM_T=" + lexical_cast< string >( orig_topo_graph.mesh[ v ].comm_time );
 
-		cout << "ID= " <<  orig_topo_graph.mesh[ v ].id << ", Comp=" <<  orig_topo_graph.mesh[ v ].comp_time << ", Comm=" <<  orig_topo_graph.mesh[ v ].comm_time << endl;
+		cout << "ID=" <<  orig_topo_graph.mesh[ v ].id << ", Comp=" <<  orig_topo_graph.mesh[ v ].comp_time << ", Comm=" <<  orig_topo_graph.mesh[ v ].comm_time;
+		cout << ", MIPS= " << orig_topo_graph.mesh[ v ].constraint[ MIPS ] << ", VEC= "<< orig_topo_graph.mesh[ v ].constraint[ VEC ] << endl;
 
-		orig_topo_graph.mesh[ v ].comp_time = 0; orig_topo_graph.mesh[ v ].comm_time = 0;
+		//orig_topo_graph.mesh[ v ].comp_time = 0; orig_topo_graph.mesh[ v ].comm_time = 0;
 	}
 
 	orig_topo_graph.PrintGraphViz( "Level_Topo_App_Map.dot" );
@@ -511,6 +612,98 @@ void TopologyDendogram :: GenMapping( vector< vector< ApplicationGraph* > > *app
 	time = tot_time;
 
 	out.close();
+}
+
+void TopologyDendogram :: CalculateCost( vector< vector< ApplicationGraph* > > *app_dendogram_obj )
+{
+	ApplicationGraph *app = app_dendogram_obj->at( 0 ).at( 0 );
+
+	BGL_FORALL_VERTICES( v, orig_topo_graph.mesh, TopologyGraph )
+	{
+		orig_topo_graph.mesh[ v ].comp_time = 0;
+		orig_topo_graph.mesh[ v ].comm_time = 0;
+		for( uint32_t i = 0; i < orig_topo_graph.mesh[ v ].app_id_ref->size(); i++ )
+		{
+			double_t c_time = AppNodeLat( app, orig_topo_graph.mesh[ v ].app_id_ref->at( i ), &orig_topo_graph, v );
+
+			if( app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].constraint.size() == 2 )
+			{
+				//~ c_time = ( app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].constraint[ MIPS ] +
+								//~ ( ceil( app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].constraint[ VEC ] /
+										//~ ( orig_topo_graph.mesh[ v ].constraint[ VEC ] ) ) ) ) /
+							//~ ( orig_topo_graph.mesh[ v ].constraint[ MIPS ] * CMP_SCALE_FACTOR );
+
+				cout << "A_ID: " << app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].id;
+				cout << " C_MIPS: " << app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].constraint[ MIPS ];
+				cout << " C_VEC: " << app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].constraint[ VEC ];
+				cout << " -> T_ID: " << orig_topo_graph.mesh[ v ].id;
+				cout << " T_MIPS: " << orig_topo_graph.mesh[ v ].constraint[ MIPS ];
+				cout << " T_VEC: " << orig_topo_graph.mesh[ v ].constraint[ VEC ];
+				cout << " C_T: " << c_time << endl;
+			}
+			else
+			{
+				//~ c_time =  app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].constraint[ MIPS ] /
+							//~ ( orig_topo_graph.mesh[ v ].constraint[ MIPS ] * CMP_SCALE_FACTOR );
+
+				cout << "A_ID: " << app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].id;
+				cout << " C_MIPS: " << app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].constraint[ MIPS ];
+				cout << " -> T_ID: " << orig_topo_graph.mesh[ v ].id;
+				cout << " T_MIPS: " << ( orig_topo_graph.mesh[ v ].constraint[ MIPS ] * CMP_SCALE_FACTOR );
+				cout << " C_T: " << c_time << endl;
+			}
+			orig_topo_graph.mesh[ v ].comp_time += c_time;
+		}
+	}
+
+	BGL_FORALL_VERTICES( v, orig_topo_graph.mesh, TopologyGraph )
+	{
+		for( uint32_t i = 0; i < orig_topo_graph.mesh[ v ].app_id_ref->size(); i++ )
+		{
+			vector< pair< uint32_t, float_t > >d_app_ids;
+			BGL_FORALL_VERTICES( a_v, app->app_graph, ApplicationGraphType )
+			{
+				if( app->app_graph[ a_v ].id == app->app_graph[ orig_topo_graph.mesh[ v ].app_id_ref->at( i ) ].id )
+				{
+					BGL_FORALL_OUTEDGES( a_v, a_e, app->app_graph, ApplicationGraphType )
+					{
+						d_app_ids.push_back( make_pair( app->app_graph[ target( a_e, app->app_graph ) ].id,
+														app->app_graph[ a_e ].weight ) );
+						//~ cout << "Found: " << app->app_graph[ target( a_e, app->app_graph ) ].id << " " <<
+														//~ app->app_graph[ a_e ].weight << endl;
+					}
+					break;
+				}
+			}
+
+			for( uint32_t k = 0; k < d_app_ids.size(); k++ )
+			{
+				bool cond = false;
+				BGL_FORALL_VERTICES( v1, orig_topo_graph.mesh, TopologyGraph )
+				{
+					for( uint32_t j = 0; j < orig_topo_graph.mesh[ v1 ].app_id_ref->size(); j++ )
+					{
+						if( d_app_ids[ k ].first == app->app_graph[ orig_topo_graph.mesh[ v1 ].app_id_ref->at( j ) ].id )
+						{
+							if( orig_topo_graph.shortest_path->at( orig_topo_graph.mesh[ v ].id ).at( orig_topo_graph.mesh[ v1 ].id ) > 0 )
+							{
+								orig_topo_graph.mesh[ v ].comm_time += d_app_ids[ k ].second /
+											( orig_topo_graph.shortest_path->at( orig_topo_graph.mesh[ v ].id ).at( orig_topo_graph.mesh[ v1 ].id ) * BW_SCALE_FACTOR );
+
+								//~ cout << "COMM_T: " << d_app_ids[ k ].second /
+											//~ ( orig_topo_graph.shortest_path->at( orig_topo_graph.mesh[ v ].id ).at( orig_topo_graph.mesh[ v1 ].id ) * BW_SCALE_FACTOR ) << endl;
+							}
+							cond = true;
+							break;
+						}
+					}
+
+					if( cond )
+						break;
+				}
+			}
+		}
+	}
 }
 
 #endif

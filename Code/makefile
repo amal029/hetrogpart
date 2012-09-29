@@ -53,7 +53,7 @@ Run: $(OBJ)
 main.o: makefile main.cpp
 	$(CPP) ${CPPFLAGS} -c main.cpp -o main.o
 
-TopoGen.o: makefile TopoGen.cpp TopoGen.hpp
+TopoGen.o: makefile TopoGen.cpp TopoGen.hpp ApplicationGraph.o
 	$(CPP) ${CPPFLAGS} -c TopoGen.cpp -o TopoGen.o
 
 ApplicationGraph.o: makefile ApplicationGraph.cpp ApplicationGraph.hpp

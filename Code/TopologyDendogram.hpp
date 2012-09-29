@@ -132,6 +132,14 @@ class TopologyDendogram
 		 */
 		void GenMapping( vector< vector< ApplicationGraph* > > *app_dendogram_obj );
 
+		void CalculateCost( vector< vector< ApplicationGraph* > > *app_dendogram_obj );
+
+		void PrintMap( vector< vector< ApplicationGraph* > > *app_dendogram_obj );
+
+		void PostPass( vector< vector< ApplicationGraph* > > *app_dendogram_obj );
+
+		double_t AppNodeLat( ApplicationGraph *app, AppVertex a_v, TopoGen *topo, TopoVertex t_v );
+
 	private:
 };
 

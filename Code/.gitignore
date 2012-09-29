@@ -7,3 +7,6 @@
 *.dot
 *.grf
 *.log
+*.part.*
+Run.x.*
+*.out

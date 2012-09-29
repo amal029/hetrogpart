@@ -20,6 +20,8 @@
 #include <fstream>
 #include <vector>
 
+#include "ApplicationGraph.hpp"
+
 #ifdef SHORT_PATH
 	#define DEBUG_SHORT_PATH 1
 #else
@@ -62,17 +64,22 @@ typedef struct
 	vector< uint32_t > ids;
 	vector< uint32_t > d_ids;
 
-	vector< uint32_t > app_ids;
+	//vector< uint32_t > app_ids;
 	uint32_t compute_req;
 
 	double_t comp_time;
 	double_t comm_time;
 
 	uint32_t compute_power;
+
+	//ApplicationGraph *mapped_graph;
+	vector< graph_traits< ApplicationGraphType >::vertex_descriptor > *app_id_ref;
 }TopoNode;
 
 // Graph type
 typedef adjacency_list< vecS, vecS, undirectedS, TopoNode, TopoEdge > TopologyGraph;
+
+typedef graph_traits< TopologyGraph >::vertex_descriptor TopoVertex;
 
 // Edge pair type
 // used initally for the construction of the graph edges

@@ -45,6 +45,8 @@ typedef struct
 // Graph type
 typedef adjacency_list< vecS, vecS, undirectedS, AppNode, AppEdge > ApplicationGraphType;
 
+typedef graph_traits< ApplicationGraphType >::vertex_descriptor AppVertex;
+
 // Edge pair type
 typedef pair< int32_t, int32_t > E;
 
