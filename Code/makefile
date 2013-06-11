@@ -4,7 +4,8 @@
 # makefile
 #
 
-CPP = g++ -Wall -std=gnu++0x -I/home/servesh/App/boost_1_51_0/include -I/home/servesh/App/metis-old/include/ -g -lm -lrt
+CPP = g++ -O3 -march=native -mtune=native -Wall -Wno-sign-compare -std=gnu++0x -I/home/servesh/App/boost_1_51_0/include -I/home/servesh/App/metis-old/include/ -lm -lrt -lssl -lcrypto
+#CPP = g++ -g -Wall -Wno-sign-compare -std=gnu++0x -I/home/servesh/App/boost_1_51_0/include -I/home/servesh/App/metis-old/include/ -lm -lrt -lssl -lcrypto
 # -I/home/servesh/App/parmetis-4.0.2/include-I/home/servesh/App/zoltan-3.6/include/
 
 CPPFLAGS =
@@ -17,10 +18,12 @@ LINK_C =
 OBJ = main.o TopoGen.o ApplicationGraph.o ApplicationDendogram.o TopologyDendogram.o MetisInterface.o $(METIS_O)
 #ZoltanInterface.o
 
-LINK = -L/home/servesh/App/boost_1_51_0/lib -L/home/servesh/App/metis-old/lib/ -lboost_graph -lmetis
+LINK = -L/home/servesh/App/boost_1_51_0/lib -L/home/servesh/App/metis-old/lib/ -lboost_graph -lmetis -lboost_serialization
 #  -L/home/servesh/App/parmetis-4.0.2/lib -L/home/servesh/App/openmpi-1.4.5/lib -L/home/servesh/App/zoltan-3.6/lib/  -lzoltan -lboost_mpi -lmpi -lparmetis -lmetis -L/home/servesh/App/scotch_5.1.2/lib/ -lptscotch  -lptscotcherr -lptscotcherrexit
 
 RM = rm -f -v
+
+STRIP = strip
 
 .PHONY: all all-before all-after clean clean-custom
 
@@ -39,13 +42,14 @@ clean: clean-custom
 	${RM} ops/*.*
 	${RM} rm -rf *.part.*
 	${RM} rm -rf Level_*
-
+	${RM} rm -rf *.comm
 
 clean-ops:
 	${RM} Level*
 
 Run: $(OBJ)
 	$(CPP) ${CPPFLAGS} $(OBJ) ${LINK} -o Run.x
+	$(STRIP) Run.x
 
 %.o: metis/%.c makefile
 	$(CC) $(CC_FLAGS) -Imetis/GKlib -Imetis -Imetis/libmetis -c $< -o $@

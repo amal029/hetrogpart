@@ -281,6 +281,18 @@ void ApplicationGraph :: SetApplicationParameters()
 				app_graph[ v ].constraint.erase( app_graph[ v ].constraint.begin() + i );
 			}
 		}
+
+        //Strip SIMD
+        if( i == 1 )
+        {
+            constraint_mask[ i ] = 0;
+
+            BGL_FORALL_VERTICES( v, app_graph, ApplicationGraphType )
+            {
+                app_graph[ v ].constraint.erase( app_graph[ v ].constraint.begin() + i );
+            }
+        }
+        //Strip SIMD
 	}
 
 	BGL_FORALL_EDGES( e, app_graph, ApplicationGraphType )

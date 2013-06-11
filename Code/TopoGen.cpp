@@ -9,6 +9,12 @@
 #ifndef TOPO_GEN_CPP
 #define TOPO_GEN_CPP
 
+#include <openssl/md5.h>
+
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
+
 #include "TopoGen.hpp"
 
 /*
@@ -53,6 +59,8 @@ void TopoGen :: Create( uint32_t dim_1_p, uint32_t dim_2_p )
 //TwoAryTwoMesh()
 void TopoGen :: TwoAryTwoMesh()
 {
+    cout << "coming into generator" << endl;
+
 	vector < E > edge_vector;
 
 	uint32_t dim_1_start = 0;
@@ -123,6 +131,8 @@ void TopoGen :: TwoAryTwoMesh()
 		}
 	}
 
+    cout << "Created edges" << endl;
+
 	for( uint32_t i = 0; i < ( dim_1 * dim_2 ); i++ )
 	{
 		for( uint32_t j = 0; j < edge_vector.size(); j++ )
@@ -140,6 +150,8 @@ void TopoGen :: TwoAryTwoMesh()
 		}
 	}
 
+    cout << "Removing duplicate edges... done" << endl;
+
 	vector < E > new_edge_vector;
 	for( uint32_t j = 0; j < edge_vector.size(); j++ )
 	{
@@ -149,7 +161,11 @@ void TopoGen :: TwoAryTwoMesh()
 		}
 	}
 
+    cout << "Finalizing data structs for topo graph creation" << endl;
+
 	mesh = TopologyGraph( &new_edge_vector[ 0 ], &new_edge_vector[ new_edge_vector.size() ], no_of_nodes );
+
+    cout << "created topo graph" << endl;
 
 	uint32_t index = 0;
 	BGL_FORALL_VERTICES( v, mesh, TopologyGraph )
@@ -162,13 +178,16 @@ void TopoGen :: TwoAryTwoMesh()
 			mesh[ v ].type = G;
 		else
 			mesh[ v ].type = C;
+
 		mesh[ v ].ids.push_back( index );
 
-		for( uint32_t i = 0; i < CONST[ mesh[ v ].type ].size(); i++ )
+		//for( uint32_t i = 0; i < CONST[ mesh[ v ].type ].size(); i++ ) //orig
+		for( uint32_t i = 0; i < 1; i++ ) //Strip SIMD
 		{
-			//mesh[ v ].constraint.push_back( CONST[ mesh[ v ].type ][ i ] );
+			mesh[ v ].constraint.push_back( ( CONST[ mesh[ v ].type ][ i ] / CMP_RANGE ) + ( rand() % ( ( uint32_t ) CONST[ mesh[ v ].type ][ i ] ) ) );
 
-			if (mesh[ v ].type == C) {
+			/*
+            if (mesh[ v ].type == C) {
 				if (i == 0)
 					mesh[ v ].constraint.push_back(10 + (rand() % 100));
 				else
@@ -180,13 +199,14 @@ void TopoGen :: TwoAryTwoMesh()
 				else
 					mesh[ v ].constraint.push_back(100000 + (rand() % 1000001));
 			}
+            */
 
 			//mesh[ v ].label += "   " + lexical_cast< string >( CONST_NAME[ i ] ) + " " +
 				//				lexical_cast< string >( CONST[ mesh[ v ].type ][ i ] );
 			mesh[ v ].label += "  " + lexical_cast< string >( CONST_NAME[ i ] ) + " " +
 								lexical_cast< string >( mesh[ v ].constraint[ i ] );
 		}
-        mesh[ v ].constraint[ NUM ] = 1;
+        //mesh[ v ].constraint[ NUM ] = 1; //orig
 
 		uint32_t temp_const_mips = CONST[ mesh[ v ].type ][ MIPS ];
 		uint32_t temp_const_vec = CONST[ mesh[ v ].type ][ VEC ];
@@ -205,26 +225,35 @@ void TopoGen :: TwoAryTwoMesh()
 	BGL_FORALL_EDGES( e, mesh, TopologyGraph )
 	{
 		//mesh[ e ].bandwidth = BANDWIDTH[ NET ];
-		mesh[ e ].bandwidth = BANDWIDTH[ NET ] + ( rand() % ( ( uint32_t ) BANDWIDTH[ NET ] * 1000 ) );
+		mesh[ e ].bandwidth = ( BANDWIDTH[ NET ] / BW_RANGE ) + ( rand() % ( ( uint32_t ) BANDWIDTH[ NET ] ) );
 		//Cartman was here.
 		//mesh[ e ].bandwidth = 1 + ( rand() % 100 );
 		mesh[ e ].label = "eth";
 		mesh[ e ].label += " " + lexical_cast< string >( mesh[ e ].bandwidth );
 	}
 
-	for( uint32_t i = 0; i < CONST[ 0 ].size(); i++ )
+	//for( uint32_t i = 0; i < CONST[ 0 ].size(); i++ ) //orig
+	for( uint32_t i = 0; i < 1; i++ ) //Strip SIMD
 	{
 		const_map.push_back( ( ConstIdType ) i );
 	}
 
-	no_of_constraints = CONST[ 0 ].size();
+	//no_of_constraints = CONST[ 0 ].size(); //orig
+	no_of_constraints = 1; //Strip SIMD
 	no_of_nodes = num_vertices( mesh );
 	no_of_edges = num_edges( mesh );
 
+    cout << "Allocations for contraint wgts done" << endl;
+
+    GenerateMetisFile( "met.grf" );
+
+    cout << "Metis topology file generated" << endl;
+
 	ComputeComm();
 
+    cout << "Creation of comm table done" << endl;
+
 	//PrintGraphViz( "out.dot" );
-	GenerateMetisFile( "met.grf" );
 }
 //end of TwoAryTwoMesh()
 
@@ -761,7 +790,12 @@ void TopoGen :: GenTpWgts( TopoGen *prev_level, vector< vector< vector< float_t 
 
 	for( uint32_t i = 0; i < tp_wgts_level->size(); i++ )
 	{
-		vector< float_t > sum( tp_wgts_level->at( i )->at( 0 )->size(), 0 );
+        int sum_vec_size = 0;
+
+		if( tp_wgts_level->at( i )->size() > 0 )
+            sum_vec_size = tp_wgts_level->at( i )->at( 0 )->size();
+
+        vector< float_t > sum( sum_vec_size, 0 );
 
 		for( uint32_t j = 0; j < tp_wgts_level->at( i )->size(); j++ )
 		{
@@ -773,9 +807,14 @@ void TopoGen :: GenTpWgts( TopoGen *prev_level, vector< vector< vector< float_t 
 
 		for( uint32_t j = 0; j < tp_wgts_level->at( i )->size(); j++ )
 		{
+            //cout << "j:" <<  tp_wgts_level->at( i )->size() << endl;
 			for( uint32_t k = 0; k < tp_wgts_level->at( i )->at( j )->size(); k++ )
 			{
-				 tp_wgts_level->at( i )->at( j )->at( k ) =  tp_wgts_level->at( i )->at( j )->at( k ) / sum[ k ];
+                //cout << "k:" << tp_wgts_level->at( i )->at( j )->size() << endl;
+                //cout << i << " " << j << " " << k << endl;
+                //cout << "tp" << tp_wgts_level->at( i )->at( j )->at( k ) << endl;
+                //cout << "sum" << sum[ k ] << endl;
+                tp_wgts_level->at( i )->at( j )->at( k ) =  tp_wgts_level->at( i )->at( j )->at( k ) / sum[ k ];
 			}
 		}
 	}
@@ -825,8 +864,12 @@ void TopoGen :: GenerateMetisFile( string filename )
 
 		output_file << endl;
 	}
+    
+    output_file.close();
 }
 
+//Floyd–Warshall algorithm
+//Really slow for large sizes
 void TopoGen :: ComputeComm()
 {
 	shortest_path = new vector< vector< float_t > >;
@@ -836,6 +879,55 @@ void TopoGen :: ComputeComm()
 	{
 		shortest_path->at( i ).resize( no_of_nodes );
 	}
+
+    string md5_sum;
+
+    unsigned long file_size;
+    vector< char > buffer;
+
+    ifstream metgrf;
+    metgrf.open( "met.grf", ios::binary );
+
+    if( metgrf.is_open() )
+    {       
+        metgrf.seekg( 0, ios::end );
+        file_size = metgrf.tellg();
+        cout << "file size: " << file_size << endl;
+        metgrf.seekg( 0, ios::beg );
+        buffer.resize( file_size );
+        metgrf.read( &buffer[ 0 ], file_size );
+
+        unsigned char result[ MD5_DIGEST_LENGTH ];        
+        MD5( ( unsigned char* ) &buffer[ 0 ], file_size, result );
+
+        for( int i = 0; i < MD5_DIGEST_LENGTH; i++ )
+        {
+            char buf[ ( MD5_DIGEST_LENGTH * 2 ) + 1 ];
+            sprintf( buf, "%02x", result[ i ] );
+            md5_sum.append( buf );
+        }
+    }
+
+    cout << "Checking to see if comm values already exist" << endl;   
+    ifstream comm_file( lexical_cast< string >( no_of_nodes ) + ".comm" );
+    if( comm_file )
+    {
+        string chk_sum;        
+
+        boost::archive::text_iarchive infs( comm_file );
+        infs >> chk_sum;
+        cout << chk_sum << endl;
+
+        if( chk_sum == md5_sum )
+        {
+            cout << "Communication values already exists for specified arch, reloading them!!!" << endl;
+            infs >> shortest_path;
+            
+            comm_file.close(); 
+            return;
+        }
+        comm_file.close();
+    }
 
 	for( uint32_t i = 0; i < no_of_nodes; i++ )
 	{
@@ -851,6 +943,8 @@ void TopoGen :: ComputeComm()
 		shortest_path->at( mesh[ target( e, mesh ) ].id ).at( mesh[ source( e, mesh ) ].id ) = ( mesh[ e ].bandwidth == 0 ? INF : 1 / mesh[ e ].bandwidth );
 	}
 
+    cout << "Not found/exists... Alloc done for " << no_of_nodes << " nodes" << endl;
+
 	for( uint32_t k = 0; k < no_of_nodes; k++ )
 	{
 		for( uint32_t i = 0; i < no_of_nodes; i++ )
@@ -861,6 +955,8 @@ void TopoGen :: ComputeComm()
 			}
 		}
 	}
+
+    cout << "Min path calc done" << endl;
 
 	for( uint32_t i = 0; i < no_of_nodes; i++ )
 	{
@@ -878,6 +974,14 @@ void TopoGen :: ComputeComm()
 				shortest_path->at( i ).at( j ) = 0;
 		}
 	}
+
+    std::ofstream ofs2( lexical_cast< string >( no_of_nodes ) + ".comm" );
+    boost::archive::text_oarchive oa2(ofs2);
+    
+    oa2 << md5_sum;
+    oa2 << shortest_path;
+    
+    ofs2.close();
 
 	if( DEBUG_SHORT_PATH )
 	{
@@ -897,8 +1001,6 @@ void TopoGen :: ComputeComm()
 			cout << endl;
 		}
 	}
-
-
 }
 
 /* avinash: comm func

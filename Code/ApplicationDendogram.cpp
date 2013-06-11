@@ -100,8 +100,9 @@ void ApplicationDendogram :: ConstructDendogram( vector< vector< vector< uint32_
 
 				//ztn.DestroyZoltan();
 			}
-
-			app_dendogram_obj[ level ][ j ]->GenerateAppSubGraphs( &parts, &app_graph_vector );
+            
+            if( parts.size() > 0 )
+    			app_dendogram_obj[ level ][ j ]->GenerateAppSubGraphs( &parts, &app_graph_vector );
 			parts.clear();
 		}
 		//cout << "Total No of subgraphs " << app_graph_vector.size() << endl;

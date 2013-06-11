@@ -51,8 +51,11 @@ int32_t MetisInterface :: PartitionGraph( TopoGen *topo_graph, uint32_t nparts,
 	if( num_edges( topo_graph->mesh ) <= 1 ||
 			num_vertices( topo_graph->mesh ) <= 1 )
 	{
-		cout << "ERROR: Cannot partition a graph with zero edges or vertices" << endl;
-		return -1;
+		cout << "ERROR: Cannot partition a graph with " << num_edges( topo_graph->mesh ) 
+                << " edges or " << num_vertices( topo_graph->mesh ) << " vertices" << endl;
+
+        parts->push_back( partitions->at( 0 ).size() );
+		return 1;
 	}
 
 	/*
@@ -140,6 +143,12 @@ int32_t MetisInterface :: MetisPart( TopoGen *topo_graph, uint32_t nparts,
 	argv.push_back( lexical_cast< string >( nparts ) );
 	argc++;
 
+    //argv.push_back( " -ptype=rb " ); 
+    //argc++;
+
+    //argv.push_back( " -ncuts=100 " );
+    //argc++;
+
 	char *arg[] = { ( char* ) "abc", ( char* ) argv[ 0 ].c_str(), ( char* ) argv[ 1 ].c_str() };
 	cout << "INFO: TG Metis call: " << argv[ 0 ].c_str() << " " << argv[ 1 ].c_str() << /*", No of args " << argc <<*/ ", ret ";
 
@@ -201,6 +210,8 @@ int32_t MetisInterface :: PartitionGraph( ApplicationGraph *app_graph_obj, uint3
 		return -1;
 	}
 
+    uint32_t skip_partitioning = 0;
+
 	if( tp_wgts->size() > 0 )
 	//if( 0 )
 	{
@@ -209,7 +220,10 @@ int32_t MetisInterface :: PartitionGraph( ApplicationGraph *app_graph_obj, uint3
 			cout << "tpwgts : " ;
 			for( uint32_t i = 0; i < tpwgts.size(); i++ )
 			{
-				cout << tpwgts[ i ] << " ";
+                if( tpwgts[ i ] == 0.00000 || tpwgts[ i ] == 1.00000 )
+                    skip_partitioning = 1;
+
+				cout << setprecision(5) << tpwgts[ i ] << " ";
 			}
 			cout << endl;
 		}
@@ -222,11 +236,32 @@ int32_t MetisInterface :: PartitionGraph( ApplicationGraph *app_graph_obj, uint3
 
 	vector< idx_t > part;
 
-	if( MetisPart( app_graph_obj, nparts, &tpwgts, " ", &part ) < 1 )
-	{
-		cout << "ERROR: Metis Partition Failed" << endl;
-		return -1;
-	}
+    if( !skip_partitioning )
+    {
+        if( MetisPart( app_graph_obj, nparts, &tpwgts, " ", &part ) < 1 )
+        {
+            cout << "ERROR: Metis Partition Failed" << endl;
+            return -1;
+        }
+    }
+    else
+    {
+        uint32_t find_part = 0;
+        uint32_t n_cnstr = app_graph_obj->no_of_constraints;
+        for( uint32_t i = 0; i < tpwgts.size(); i++ )
+        {
+            if( tpwgts.at( i ) == 1.0000 )
+            {
+                find_part = i / n_cnstr;
+                break;
+            }
+        }
+
+        for( uint32_t i = 0; i < num_vertices( app_graph_obj->app_graph ); i++ )
+        {
+            part.push_back( find_part );
+        }
+    }
 
 	for( uint32_t i = 0; i < part.size(); i++ )
 	{
@@ -265,7 +300,7 @@ int32_t MetisInterface :: MetisPart( ApplicationGraph *app_graph, uint32_t npart
 		uint32_t c_index = 0;
 		for( uint32_t i = 0; i < tpwgts->size(); i++ )
 		{
-			tpwgt_file << fixed << index << ":" << c_index << " = " << tpwgts->at( i ) << endl;
+			tpwgt_file << fixed << index << ":" << c_index << " = " << setprecision(10) << tpwgts->at( i ) << endl;
 
 			if( c_index < ( n_cnstr - 1 ) )
 			{

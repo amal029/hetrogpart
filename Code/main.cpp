@@ -30,14 +30,14 @@ static double us_diff( struct timespec start, struct timespec end )
 //main()
 int main( int argc, char **argv )
 {
-	cout  << fixed;
+	cout << fixed;
 	if( argc < 4 )
 	{
 		cout << "No of options specified is not valid" << endl;
 		cout << "Usage: application_graph x_dim_topo y_dim_topo" << endl;
 		return -1;
 	}
-	srand( 1 );
+	srand( 2 );
 
 	struct timespec start, end;
 

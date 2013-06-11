@@ -48,9 +48,9 @@ void TopologyDendogram::CreateTopologyGraph( int dim1, int dim2,
 		parts_req.push_back( orig_topo_graph.no_of_nodes / ( i * 2 ) );
 	}
 
-	//parts_req.push_back( orig_topo_graph.no_of_nodes /  2 );
-	//dendogram_height = 1;
-	//parts_req.push_back( orig_topo_graph.no_of_nodes /  4 );
+	////parts_req.push_back( orig_topo_graph.no_of_nodes /  2 );
+	//dendogram_height = 1;//metis
+	////parts_req.push_back( orig_topo_graph.no_of_nodes /  4 );
 
 	parts_req.push_back( 1 );
 	dendogram_height++;
@@ -221,7 +221,6 @@ void TopologyDendogram :: GenTpWgts( vector< vector< vector< vector< float_t >* 
 		cout << endl;
 	}
 	*/
-
 	for( uint32_t k = 0; k < parts_vector->size(); k++ )
 	{
 		cout << "L" << k << " "<< topo_graph_vector.at( topo_graph_vector.size() - 2 - k )->no_of_nodes << " ";
@@ -257,7 +256,7 @@ void TopologyDendogram :: GenTpWgts( vector< vector< vector< vector< float_t >* 
 		cout << endl;
 	}
 
-
+    /*
 	for( int32_t i = topo_graph_vector.size() - 2; i >= 0; i-- )
 	{
 		//cout << topo_graph_vector.at( i )->no_of_nodes << endl;
@@ -266,6 +265,7 @@ void TopologyDendogram :: GenTpWgts( vector< vector< vector< vector< float_t >* 
 			//if( topo_graph_vector.at( i )->mesh)
 		}
 	}
+    */
 
 	tp_wgts_p = tp_wgts_vector;
 	parts_p = parts_vector;
@@ -494,6 +494,7 @@ void TopologyDendogram :: PostPass( vector< vector< ApplicationGraph* > > *app_d
 	vector< AppVertex > moved_app_nodes;
 
 	bool run = true;
+    uint32_t n_runs = 0;
 	while( run )
 	{
 		vector< pair< TopoVertex, double_t > > curr_cost;
@@ -530,10 +531,10 @@ void TopologyDendogram :: PostPass( vector< vector< ApplicationGraph* > > *app_d
 		}
 		cout << "INFO: Max app time of " << max_app_cost << " found on " << app->app_graph[ orig_topo_graph.mesh[ max_node ].app_id_ref->at( max_app_ref_id ) ].id << endl;
 
+        if( n_runs > 10 )
+            run = false;
 
-
-		run = false;
-
+        n_runs++;
 	}
 }
 

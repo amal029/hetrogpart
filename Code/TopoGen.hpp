@@ -31,15 +31,20 @@
 using namespace boost;
 using namespace std;
 
-const vector< vector< uint32_t > >CONST = { { 2400, 16, 1 }, { 700, 1024, 1 } };
+//MIPS is scaled down by a 1000 so it is in KIPS
+const vector< vector< uint32_t > >CONST = { { 100000, 1000, 1 }, { 1000, 100000, 1 } };
 const vector< string >CONST_NAME = { "MIPS", "VEC", "NUM" };
 typedef enum ConstId{ MIPS, VEC, NUM } ConstIdType;
 typedef enum ProcId{ C, G, M } ProcIdType;
 
 #define CMP_SCALE_FACTOR 1
-#define BW_SCALE_FACTOR 1000
-//Bandwidth in Mb/s
-const vector< float_t >BANDWIDTH = { 100000, 16000, 1 };
+#define BW_SCALE_FACTOR 1
+
+#define CMP_RANGE 100
+#define BW_RANGE 1000
+
+//Bandwidth in KB/s
+const vector< float_t >BANDWIDTH = { 100000, 16000, 100000 };
 const vector< string >BANDWIDTH_NAME = { "CORE->CORE", "CORE->GPU", "CPU->CPU" };
 typedef enum BwId{ CORE, PCIE, NET } BwIdType;
 
